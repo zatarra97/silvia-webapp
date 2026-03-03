@@ -245,7 +245,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <ThemeInit />
       <ThemeConfig dark={false} />
       <Provider config={rollbarConfig}>
