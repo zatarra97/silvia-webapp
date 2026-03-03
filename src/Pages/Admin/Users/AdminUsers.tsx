@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { toast } from "react-toastify"
 import { genericGet, genericPost } from "../../../services/api-utility"
 import { LOCAL_STORAGE_KEYS } from "../../../constants"
+import DeleteModal from "../../../Components/DeleteModal"
 
 interface CognitoUser {
 	username: string
@@ -11,14 +12,8 @@ interface CognitoUser {
 	enabled: boolean
 	status: string
 	createdAt?: string
+	lastAccessAt?: string
 	isAdmin: boolean
-}
-
-const STATUS_MAP: Record<string, string> = {
-	CONFIRMED:    "Confermato",
-	UNCONFIRMED:  "Non confermato",
-	FORCE_CHANGE_PASSWORD: "Password da cambiare",
-	RESET_REQUIRED: "Reset richiesto",
 }
 
 const AdminUsers = () => {
@@ -26,6 +21,7 @@ const AdminUsers = () => {
 	const [loading, setLoading] = useState(true)
 	const [emailFilter, setEmailFilter] = useState("")
 	const [toggling, setToggling] = useState<string | null>(null)
+	const [confirmUser, setConfirmUser] = useState<CognitoUser | null>(null)
 
 	const selfEmail = localStorage.getItem(LOCAL_STORAGE_KEYS.USER_EMAIL) ?? ""
 
@@ -40,16 +36,17 @@ const AdminUsers = () => {
 
 	useEffect(() => { load() }, [load])
 
-	const toggle = async (user: CognitoUser) => {
-		if (toggling) return
-		setToggling(user.username)
-		const action = user.enabled ? "disable" : "enable"
+	const toggle = async () => {
+		if (!confirmUser || toggling) return
+		setToggling(confirmUser.username)
+		const action = confirmUser.enabled ? "disable" : "enable"
 		try {
-			await genericPost(`admin/users/${encodeURIComponent(user.username)}/${action}`)
+			await genericPost(`admin/users/${encodeURIComponent(confirmUser.username)}/${action}`)
 			setUsers(prev =>
-				prev.map(u => u.username === user.username ? {...u, enabled: !u.enabled} : u)
+				prev.map(u => u.username === confirmUser.username ? {...u, enabled: !u.enabled} : u)
 			)
-			toast.success(user.enabled ? "Utente disabilitato" : "Utente abilitato")
+			toast.success(confirmUser.enabled ? "Utente disabilitato" : "Utente abilitato")
+			setConfirmUser(null)
 		} catch (err: any) {
 			const msg = err?.response?.data?.error?.message ?? "Errore durante l'operazione"
 			toast.error(msg)
@@ -98,8 +95,8 @@ const AdminUsers = () => {
 								<tr>
 									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Utente</th>
 									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ruolo</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Stato Cognito</th>
 									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Registrato il</th>
+									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ultimo accesso</th>
 									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Accesso</th>
 									<th className="px-4 py-3" />
 								</tr>
@@ -135,14 +132,14 @@ const AdminUsers = () => {
 													</span>
 												)}
 											</td>
-											<td className="px-4 py-3">
-												<span className="text-xs text-gray-500">
-													{STATUS_MAP[user.status] ?? user.status}
-												</span>
-											</td>
 											<td className="px-4 py-3 text-sm text-gray-500">
 												{user.createdAt
 													? new Date(user.createdAt).toLocaleDateString("it-IT")
+													: "—"}
+											</td>
+											<td className="px-4 py-3 text-sm text-gray-500">
+												{user.lastAccessAt
+													? new Date(user.lastAccessAt).toLocaleDateString("it-IT")
 													: "—"}
 											</td>
 											<td className="px-4 py-3">
@@ -154,7 +151,7 @@ const AdminUsers = () => {
 											<td className="px-4 py-3 text-right">
 												{!isSelf && !user.isAdmin && (
 													<button
-														onClick={() => toggle(user)}
+														onClick={() => setConfirmUser(user)}
 														disabled={isLoading || !!toggling}
 														className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
 															user.enabled
@@ -187,6 +184,20 @@ const AdminUsers = () => {
 					Gli account Admin non possono essere disabilitati da questa interfaccia. Il filtro per email usa la corrispondenza per prefisso.
 				</p>
 			</div>
+
+			<DeleteModal
+				isOpen={!!confirmUser}
+				onClose={() => setConfirmUser(null)}
+				onConfirm={toggle}
+				title={confirmUser?.enabled ? "Disabilita utente" : "Abilita utente"}
+				description={
+					confirmUser?.enabled
+						? `Stai per disabilitare l'utente "${confirmUser?.email}". Non potrà più accedere alla piattaforma.`
+						: `Stai per riabilitare l'utente "${confirmUser?.email}". Potrà accedere nuovamente alla piattaforma.`
+				}
+				confirmText={confirmUser?.enabled ? "Disabilita" : "Abilita"}
+				isLoading={!!toggling}
+			/>
 		</div>
 	)
 }
