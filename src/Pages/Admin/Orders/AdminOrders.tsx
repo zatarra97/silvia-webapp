@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "react-toastify"
 import { genericGet } from "../../../services/api-utility"
 import Input from "../../../Components/Input"
+import Select from "../../../Components/Select"
 
 interface Order {
 	publicId: string
@@ -228,15 +229,17 @@ const AdminOrders = () => {
 				{/* Filtri */}
 				<div className="flex flex-col sm:flex-row gap-3 mb-6">
 					{view === "table" && (
-						<select
-							value={statusFilter}
-							onChange={(e) => setStatusFilter(e.target.value)}
-							className="appearance-none border border-gray-300 rounded w-auto py-2 px-3 leading-tight focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white form-input"
-						>
-							{STATUS_OPTIONS.map((o) => (
-								<option key={o.value} value={o.value}>{o.label}</option>
-							))}
-						</select>
+						<div className="w-48">
+							<Select
+								name="statusFilter"
+								value={statusFilter}
+								onChange={(e) => setStatusFilter(e.target.value as string ?? "")}
+								options={STATUS_OPTIONS}
+								placeholder="Tutti gli stati"
+								isClearable={false}
+								isSearchable={false}
+							/>
+						</div>
 					)}
 					<div className="flex-1">
 						<Input

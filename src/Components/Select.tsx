@@ -16,9 +16,11 @@ interface SelectProps {
 	error?: { message: string }
 	placeholder?: string
 	disabled?: boolean
+	isClearable?: boolean
+	isSearchable?: boolean
 }
 
-const CustomSelect = React.forwardRef<any, SelectProps>(({ label, name, value, onChange, onBlur, options, error, placeholder, disabled }, ref) => {
+const CustomSelect = React.forwardRef<any, SelectProps>(({ label, name, value, onChange, onBlur, options, error, placeholder, disabled, isClearable = true, isSearchable = true }, ref) => {
 	const selectedOption = options.find((option) => {
 		return String(option.value) === String(value)
 	})
@@ -44,8 +46,8 @@ const CustomSelect = React.forwardRef<any, SelectProps>(({ label, name, value, o
 				onBlur={onBlur}
 				options={options}
 				placeholder={placeholder}
-				isClearable
-				isSearchable
+				isClearable={isClearable}
+				isSearchable={isSearchable}
 				isDisabled={disabled}
 				menuPortalTarget={typeof document !== "undefined" ? document.body : undefined}
 				menuPosition="fixed"
@@ -53,13 +55,13 @@ const CustomSelect = React.forwardRef<any, SelectProps>(({ label, name, value, o
 				styles={{
 					control: (baseStyles, state) => ({
 						...baseStyles,
-						borderColor: error ? "red" : state.isFocused ? "var(--color-primary)" : "#d1d5db",
-						boxShadow: state.isFocused ? "0 0 0 1px #febe10" : "none",
+						borderColor: error ? "red" : state.isFocused ? "#7c3aed" : "#d1d5db",
+						boxShadow: state.isFocused ? "0 0 0 1px #7c3aed" : "none",
 						opacity: disabled ? 1 : 1,
 						color: disabled ? "#6B7280" : "#374151",
 						backgroundColor: disabled ? "#f8fafc" : "white",
 						"&:hover": {
-							borderColor: state.isFocused ? "var(--color-primary)" : "#d1d5db",
+							borderColor: state.isFocused ? "#7c3aed" : "#d1d5db",
 						},
 						fontSize: "form-input",
 					}),
@@ -70,6 +72,12 @@ const CustomSelect = React.forwardRef<any, SelectProps>(({ label, name, value, o
 					menu: (base) => ({
 						...base,
 						zIndex: 999999,
+					}),
+					option: (baseStyles, state) => ({
+						...baseStyles,
+						backgroundColor: state.isSelected ? "#7c3aed" : state.isFocused ? "#ede9fe" : "white",
+						color: state.isSelected ? "white" : "#374151",
+						"&:active": { backgroundColor: "#8b5cf6" },
 					}),
 					singleValue: (baseStyles) => ({
 						...baseStyles,
