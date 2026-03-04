@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "react-toastify"
 import { genericGet, genericPost } from "../../../services/api-utility"
+import Input from "../../../Components/Input"
 import { LOCAL_STORAGE_KEYS } from "../../../constants"
 import DeleteModal from "../../../Components/DeleteModal"
 
@@ -61,21 +62,12 @@ const AdminUsers = () => {
 				<h1 className="text-2xl font-bold text-gray-800 mb-6">Utenti</h1>
 
 				{/* Filtro email */}
-				<div className="flex gap-3 mb-6">
-					<input
-						type="text"
+				<div className="max-w-sm mb-6">
+					<Input
 						placeholder="Filtra per email…"
 						value={emailFilter}
 						onChange={(e) => setEmailFilter(e.target.value)}
-						className="block flex-1 max-w-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
 					/>
-					<button
-						onClick={load}
-						className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors cursor-pointer"
-					>
-						<i className="fa-solid fa-magnifying-glass" />
-						Cerca
-					</button>
 				</div>
 
 				{loading ? (

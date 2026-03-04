@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "react-toastify"
 import { genericGet } from "../../../services/api-utility"
+import Input from "../../../Components/Input"
 
 interface Conversation {
 	publicId: string
@@ -52,19 +53,19 @@ const AdminMessageList = () => {
 					<select
 						value={statusFilter}
 						onChange={(e) => setStatusFilter(e.target.value)}
-						className="block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+						className="appearance-none border border-gray-300 rounded w-auto py-2 px-3 leading-tight focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white form-input"
 					>
 						{STATUS_OPTIONS.map((o) => (
 							<option key={o.value} value={o.value}>{o.label}</option>
 						))}
 					</select>
-					<input
-						type="text"
-						placeholder="Cerca per email utente…"
-						value={emailSearch}
-						onChange={(e) => setEmailSearch(e.target.value)}
-						className="block flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-					/>
+					<div className="flex-1">
+						<Input
+							placeholder="Cerca per email utente…"
+							value={emailSearch}
+							onChange={(e) => setEmailSearch(e.target.value)}
+						/>
+					</div>
 				</div>
 
 				{loading ? (

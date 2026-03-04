@@ -53,13 +53,13 @@ const CustomSelect = React.forwardRef<any, SelectProps>(({ label, name, value, o
 				styles={{
 					control: (baseStyles, state) => ({
 						...baseStyles,
-						borderColor: error ? "red" : state.isFocused ? "#febe10" : "#d1d5db",
+						borderColor: error ? "red" : state.isFocused ? "var(--color-primary)" : "#d1d5db",
 						boxShadow: state.isFocused ? "0 0 0 1px #febe10" : "none",
 						opacity: disabled ? 1 : 1,
 						color: disabled ? "#6B7280" : "#374151",
 						backgroundColor: disabled ? "#f8fafc" : "white",
 						"&:hover": {
-							borderColor: state.isFocused ? "#febe10" : "#d1d5db",
+							borderColor: state.isFocused ? "var(--color-primary)" : "#d1d5db",
 						},
 						fontSize: "form-input",
 					}),

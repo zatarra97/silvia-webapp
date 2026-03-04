@@ -311,7 +311,7 @@ const AdminOrderDetail = () => {
 									<select
 										value={adminStatus}
 										onChange={(e) => setAdminStatus(e.target.value)}
-										className={`block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${STATUS_CLASSES[adminStatus] ?? ""}`}
+										className={`block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary ${STATUS_CLASSES[adminStatus] ?? ""}`}
 									>
 										{STATUS_OPTIONS.map((o) => (
 											<option key={o.value} value={o.value}>{o.label}</option>
@@ -329,7 +329,7 @@ const AdminOrderDetail = () => {
 										onChange={(e) => setAdminNotes(e.target.value)}
 										rows={4}
 										placeholder="Inserisci note visibili al cliente…"
-										className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 resize-none"
+										className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary resize-none"
 									/>
 								</div>
 
@@ -343,7 +343,7 @@ const AdminOrderDetail = () => {
 										value={deliveryLink}
 										onChange={(e) => setDeliveryLink(e.target.value)}
 										placeholder="https://…"
-										className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+										className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
 									/>
 								</div>
 
