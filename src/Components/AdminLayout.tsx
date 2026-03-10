@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { NavLink } from "react-router-dom"
-import { genericGet } from "../services/api-utility"
 
 interface AdminLayoutProps {
 	children: React.ReactNode
@@ -9,30 +8,18 @@ interface AdminLayoutProps {
 }
 
 const NAV_ITEMS = [
-	{ to: "/admin",          icon: "fa-solid fa-gauge",          label: "Dashboard", end: true  },
-	{ to: "/admin/services", icon: "fa-solid fa-film",           label: "Servizi",   end: false },
-	{ to: "/admin/orders",   icon: "fa-solid fa-clipboard-list", label: "Ordini",    end: false },
-	{ to: "/admin/messages", icon: "fa-solid fa-comments",       label: "Messaggi",  end: false },
-	{ to: "/admin/users",    icon: "fa-solid fa-users",          label: "Utenti",    end: false },
+	{ to: "/admin",                        icon: "fa-solid fa-gauge",          label: "Dashboard",               end: true  },
+	{ to: "/admin/patients",               icon: "fa-solid fa-hospital-user",  label: "Patients",                end: false },
+	{ to: "/admin/wards",                  icon: "fa-solid fa-bed",            label: "Wards of admission",      end: false },
+	{ to: "/admin/sites",                  icon: "fa-solid fa-vials",          label: "Sites of isolation",      end: false },
+	{ to: "/admin/antimicrobial-therapies", icon: "fa-solid fa-pills",         label: "Antimicrobial therapies", end: false },
+	{ to: "/admin/bsi-pathogens",          icon: "fa-solid fa-bacterium",      label: "BSI pathogens",           end: false },
+	{ to: "/admin/resistance-profiles",    icon: "fa-solid fa-shield-virus",   label: "Resistance profiles",     end: false },
+	{ to: "/admin/ast-antibiotics",        icon: "fa-solid fa-capsules",       label: "Antibiotics",             end: false },
 ]
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout }) => {
 	const [expanded, setExpanded] = useState(true)
-	const [unreadMessages, setUnreadMessages] = useState(0)
-
-	useEffect(() => {
-		const fetchUnread = () => {
-			genericGet("admin/conversations")
-				.then((data: { unreadCount: number }[]) => {
-					const total = data.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
-					setUnreadMessages(total)
-				})
-				.catch(() => {})
-		}
-		fetchUnread()
-		const interval = setInterval(fetchUnread, 60_000)
-		return () => clearInterval(interval)
-	}, [])
 
 	const avatarLetter = userEmail.charAt(0).toUpperCase()
 
@@ -51,72 +38,57 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 						expanded ? "px-5 gap-2.5" : "justify-center px-4"
 					}`}
 				>
-					<i className="fa-solid fa-heart text-violet-600 text-lg shrink-0" aria-hidden />
+					<i className="fa-solid fa-staff-snake text-blue-600 text-lg shrink-0" aria-hidden />
 					{expanded && (
 						<span className="font-bold text-gray-800 text-sm tracking-wide whitespace-nowrap">
-							WeddingCut
+							SIS Medical
 						</span>
 					)}
 				</div>
 
 				{/* Nav items */}
 				<nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-					{NAV_ITEMS.map((item) => {
-						const isMessages = item.label === "Messaggi"
-						return (
-							<NavLink
-								key={item.to}
-								to={item.to}
-								end={item.end}
-								title={!expanded ? item.label : undefined}
-								className={({ isActive }) =>
-									`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
-										isActive
-											? "bg-violet-600 text-white shadow-sm"
-											: "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
-									}`
-								}
-							>
-								{({ isActive }) => (
-									<>
-										<i className={`${item.icon} w-4 text-center shrink-0`} aria-hidden />
-										{expanded && <span className="flex-1 truncate">{item.label}</span>}
+					{NAV_ITEMS.map((item) => (
+						<NavLink
+							key={item.to}
+							to={item.to}
+							end={item.end}
+							title={!expanded ? item.label : undefined}
+							className={({ isActive }) =>
+								`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
+									isActive
+										? "bg-blue-600 text-white shadow-sm"
+										: "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+								}`
+							}
+						>
+							{() => (
+								<>
+									<i className={`${item.icon} w-4 text-center shrink-0`} aria-hidden />
+									{expanded && <span className="flex-1 truncate">{item.label}</span>}
 
-										{/* Badge messaggi non letti */}
-										{isMessages && unreadMessages > 0 && (
-											<span
-												className={`flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold leading-none shrink-0 ${
-													isActive ? "bg-white/20 text-white" : "bg-red-500 text-white"
-												} ${expanded ? "" : "absolute -top-1 -right-1"}`}
-											>
-												{unreadMessages > 99 ? "99+" : unreadMessages}
-											</span>
-										)}
-
-										{/* Tooltip per sidebar collassata */}
-										{!expanded && (
-											<span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
-												{item.label}
-												{isMessages && unreadMessages > 0 && ` (${unreadMessages})`}
-											</span>
-										)}
-									</>
-								)}
-							</NavLink>
-						)
-					})}
+									{/* Tooltip per sidebar collassata */}
+									{!expanded && (
+										<span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+											{item.label}
+										</span>
+									)}
+								</>
+							)}
+						</NavLink>
+					))}
 				</nav>
 
 				{/* User info + logout */}
 				<div className={`shrink-0 border-t border-gray-100 py-3 ${expanded ? "px-3" : "px-2"}`}>
 					{expanded ? (
 						<div className="flex items-center gap-3 px-2 py-2 rounded-lg">
-							<div className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-100 text-violet-600 text-xs font-bold shrink-0">
+							<div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold shrink-0">
 								{avatarLetter}
 							</div>
 							<div className="flex-1 min-w-0">
 								<p className="text-xs font-semibold text-gray-800 truncate">{userEmail}</p>
-								<p className="text-xs text-gray-400">Amministratore</p>
+								<p className="text-xs text-gray-400">Administrator</p>
 							</div>
 							<button
 								onClick={onLogout}
@@ -129,7 +101,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 					) : (
 						<div className="flex flex-col items-center gap-2">
 							<div
-								className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-100 text-violet-600 text-xs font-bold"
+								className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold"
 								title={userEmail}
 							>
 								{avatarLetter}
@@ -165,7 +137,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 						<span className="hidden sm:block text-sm text-gray-500 sm:truncate sm:max-w-[200px] md:overflow-visible md:text-clip md:max-w-none">
 							{userEmail}
 						</span>
-						<div className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-100 text-violet-600 text-xs font-bold">
+						<div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
 							{avatarLetter}
 						</div>
 					</div>

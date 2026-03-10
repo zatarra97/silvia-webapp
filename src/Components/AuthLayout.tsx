@@ -27,7 +27,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, logo, logoAlt = "Logo
 			</div>
 
 			<p className="relative z-10 mt-6 text-sm text-white/50 tracking-widest uppercase">
-				Professional Wedding Video Editing
+				SIS Medical Platform
 			</p>
 		</section>
 	)

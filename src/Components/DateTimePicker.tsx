@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useRef, useCallback } from "react"
 import { Datepicker } from "flowbite-react"
 import moment from "moment"
 
@@ -103,6 +103,16 @@ const theme = {
 
 const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
 	({ label, value, onChange, error, disableFuture, yearOnly, className, disabled, ...rest }, ref) => {
+		const containerRef = useRef<HTMLDivElement>(null)
+		const setRefs = useCallback(
+			(node: HTMLDivElement | null) => {
+				;(containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+				if (typeof ref === "function") ref(node)
+				else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node
+			},
+			[ref],
+		)
+
 		const handleChange = (date: Date | null) => {
 			if (date) {
 				// Crea una data UTC direttamente utilizzando i componenti anno, mese, giorno
@@ -152,9 +162,9 @@ const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
 		const datepickerKey = value ? `datepicker-${value}` : "datepicker-empty"
 
 		useEffect(() => {
-			// Applica gli stili direttamente all'input dopo il render
+			// Applica gli stili solo all'input di questa istanza (evita conflitti con più DateTimePicker nella stessa pagina)
 			const applyCustomStyles = () => {
-				const input = document.querySelector(".custom-datepicker input") as HTMLInputElement
+				const input = containerRef.current?.querySelector("input") as HTMLInputElement | undefined
 
 				if (input) {
 					// Reset di tutti gli stili
@@ -195,8 +205,8 @@ const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
 						const handleFocus = () => {
 							if (input) {
 								input.style.outline = "none"
-								input.style.borderColor = error ? "#ef4444" : "#8b6f4e"
-								input.style.boxShadow = `0 0 0 1px ${error ? "#ef4444" : "#8b6f4e"}`
+								input.style.borderColor = error ? "#ef4444" : "#febe10"
+								input.style.boxShadow = `0 0 0 1px ${error ? "#ef4444" : "#febe10"}`
 							}
 						}
 
@@ -226,21 +236,25 @@ const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
 		}, [error, value, disabled]) // Riapplica quando cambiano errore, valore o stato disabled
 
 		const dateValue = getDateValue()
+		// Passare sempre value (Date | null): se non passiamo value, flowbite mostra oggi come default
+		// e al blur dopo "Annulla" riapplica oggi. Con value={null} esplicito nessun default.
+		const controlledValue = dateValue !== undefined ? dateValue : null
 
 		return (
 			<div className={`w-full ${className || ""}`}>
 				{label && <label className="form-label">{label}</label>}
-				<div ref={ref} className="custom-datepicker">
+				<div ref={setRefs} className="custom-datepicker">
 					<Datepicker
 						key={datepickerKey}
 						onChange={handleChange}
-						{...(dateValue !== undefined ? { value: dateValue } : {})}
+						value={controlledValue}
+						label=""
 						maxDate={disableFuture ? new Date() : undefined}
 						theme={theme}
 						language="it"
 						weekStart={1}
 						labelTodayButton="Oggi"
-						labelClearButton="Cancella"
+						labelClearButton="Annulla"
 						disabled={disabled}
 						{...rest}
 					/>
@@ -261,8 +275,8 @@ const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
             }
 
             .custom-datepicker input:focus {
-              border-color: #8b6f4e;
-              box-shadow: 0 0 0 1px #8b6f4e;
+              border-color: #febe10;
+              box-shadow: 0 0 0 1px #febe10;
               position: relative;
               top: 0;
               left: 0;
@@ -275,7 +289,7 @@ const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
 				{error && <p className="text-red-500 text-xs mt-1">{error.message}</p>}
 			</div>
 		)
-	}
+	},
 )
 
 DateTimePicker.displayName = "DateTimePicker"

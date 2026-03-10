@@ -109,7 +109,7 @@ type Filters = Record<string, any>
 type Pagination = {limit?: number; skip?: number}
 
 const isBooleanField = (fieldName: string): boolean => {
-	const booleanFields = ["registerEnabled", "registerSelfConsumption", "licenseNeeded", "isActive", "enabled"]
+	const booleanFields = ["isActive", "enabled"]
 	return booleanFields.includes(fieldName) || fieldName.endsWith("Enabled") || fieldName.endsWith("Active")
 }
 
@@ -280,10 +280,6 @@ export const genericDelete = async (endpoint: string): Promise<void> => {
 }
 
 export const genericPost = async (endpoint: string, data: any = {}): Promise<any> => {
-	if (localStorage.getItem(LOCAL_STORAGE_KEYS.DEMO_MODE) === "true") {
-		window.dispatchEvent(new Event("open-demo-modal"))
-		return data
-	}
 	try {
 		const response = await apiClient.post(`${import.meta.env.VITE_BACKEND_URL}/${endpoint}`, data)
 		return response.data
@@ -294,27 +290,9 @@ export const genericPost = async (endpoint: string, data: any = {}): Promise<any
 }
 
 // ---------------------------------------------------------------------------
-// API — presigned URL (S3)
-// ---------------------------------------------------------------------------
-export const getPresignedUrl = async (
-	entity: string,
-	id: string | number,
-	type: "upload" | "download",
-	data?: Record<string, any>,
-): Promise<{presignedUrl: string; s3Path?: string}> => {
-	const endpoint = `${entity}/${id}/presigned-url-${type}`
-	const payload = data || {}
-	return await createItem(endpoint, payload)
-}
-
-// ---------------------------------------------------------------------------
 // API — CRUD
 // ---------------------------------------------------------------------------
 export const createItem = async (entity: string, data: any): Promise<any> => {
-	if (localStorage.getItem(LOCAL_STORAGE_KEYS.DEMO_MODE) === "true") {
-		window.dispatchEvent(new Event("open-demo-modal"))
-		return data
-	}
 	try {
 		const response = await apiClient.post(`${import.meta.env.VITE_BACKEND_URL}/${entity}`, data)
 		return response.data
