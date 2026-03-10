@@ -165,121 +165,179 @@ function buildPatientRow(patient: any, counts: DynamicCounts, antibiotics: any[]
   return row
 }
 
-function addDictionaryTable(
-  sheet: ExcelJS.Worksheet,
-  title: string,
-  headers: string[],
-  rows: (string | number | null)[][],
-  startRow: number,
-): number {
-  // Title row (bold)
-  const titleCell = sheet.getCell(startRow, 1)
-  titleCell.value = title
-  titleCell.font = { bold: true, size: 12 }
-  startRow++
 
-  // Header row
-  headers.forEach((h, i) => {
-    const cell = sheet.getCell(startRow, i + 1)
-    cell.value = h
-    cell.font = { bold: true }
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } }
-  })
-  startRow++
+interface DictField {
+  name: string
+  description: string
+  section: string
+  type: 'enum' | 'numeric' | 'date' | 'text'
+  options?: { id: number; label: string }[]
+}
 
-  // Data rows
-  for (const row of rows) {
-    row.forEach((val, i) => {
-      sheet.getCell(startRow, i + 1).value = val
-    })
-    startRow++
-  }
+function buildDictFields(lookups: Lookups): DictField[] {
+  const sortById = <T extends { id: number }>(arr: T[]) => [...arr].sort((a, b) => a.id - b.id)
 
-  // Blank row separator
-  return startRow + 1
+  return [
+    // DEMOGRAPHIC DATA
+    { name: 'Name', description: 'Patient name', section: 'DEMOGRAPHIC DATA', type: 'text', options: [{ id: 0, label: 'text' }] },
+    { name: 'ID patient', description: 'Unique patient identifier', section: 'DEMOGRAPHIC DATA', type: 'text', options: [{ id: 0, label: 'code number' }] },
+    { name: 'Age', description: 'Date of birth', section: 'DEMOGRAPHIC DATA', type: 'date' },
+    { name: 'Sex', description: '', section: 'DEMOGRAPHIC DATA', type: 'enum', options: [{ id: 0, label: 'Female' }, { id: 1, label: 'Male' }] },
+
+    // CLINICAL DATA
+    { name: 'Ward of admission', description: 'Hospital ward at admission', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.wards).map(w => ({ id: w.id, label: w.name })) },
+    { name: 'BSI onset', description: 'Mode of infection acquisition', section: 'CLINICAL DATA', type: 'enum', options: [{ id: 0, label: 'Community-acquired' }, { id: 1, label: 'Hospital-acquired' }] },
+    { name: 'BSI diagnosis date', description: 'Date of first positive blood culture', section: 'CLINICAL DATA', type: 'date' },
+    { name: 'Site of isolation', description: '', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
+    { name: 'SOFA score', description: '', section: 'CLINICAL DATA', type: 'numeric' },
+    { name: 'Charlson Comorbidity Index', description: '', section: 'CLINICAL DATA', type: 'numeric' },
+
+    // MICROBIOLOGICAL DATA
+    { name: 'Rectal colonization', description: 'Detection of multidrug-resistant organisms by rectal swab', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
+    { name: 'Rectal colonization pathogen', description: 'Rectal colonization pathogen (if any)', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
+    { name: 'BSI causative pathogen', description: 'Name of the microorganism isolated from blood', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
+    { name: 'Resistance profile', description: 'Main resistance mechanism or phenotype', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
+    { name: 'Mono- or poli-microbial infection', description: 'BSI caused by a single microorganism or by multiple microorganisms', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'Monomicrobial' }, { id: 1, label: 'Polymicrobial' }] },
+    { name: 'Antibiotic susceptibility testing (AST)', description: 'Result of antimicrobial susceptibility testing for each antibiotic', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'Not available / not tested' }, { id: 1, label: 'Resistant' }, { id: 2, label: 'Susceptible' }, { id: 3, label: 'Intermediate' }] },
+    { name: 'Minimum Inhibitory Concentration (MIC)', description: 'Lowest antibiotic concentration inhibiting bacterial growth', section: 'MICROBIOLOGICAL DATA', type: 'numeric' },
+
+    // THERAPEUTIC DATA
+    { name: 'Empirical antimicrobial therapy', description: 'Antibiotic treatment initiated before availability of microbiological results', section: 'THERAPEUTIC DATA', type: 'enum', options: sortById(lookups.therapies).map(t => ({ id: t.id, label: t.name })) },
+    { name: 'Targeted therapy', description: 'Antibiotic treatment according to pathogen identification and resistance profile', section: 'THERAPEUTIC DATA', type: 'enum', options: sortById(lookups.therapies).map(t => ({ id: t.id, label: t.name })) },
+    { name: 'Combination therapy', description: '', section: 'THERAPEUTIC DATA', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
+    { name: 'Time to appropriate therapy (days)', description: 'Time interval between BSI diagnosis date and initiation of an appropriate antimicrobial therapy', section: 'THERAPEUTIC DATA', type: 'numeric' },
+    { name: 'Date targeted therapy', description: '', section: 'THERAPEUTIC DATA', type: 'date' },
+
+    // OUTCOME
+    { name: '30-day mortality', description: '', section: 'OUTCOME', type: 'enum', options: [{ id: 0, label: 'Non-survivor' }, { id: 1, label: 'Survivor' }] },
+  ]
 }
 
 function buildDictionarySheet(workbook: ExcelJS.Workbook, lookups: Lookups): void {
-  const sheet = workbook.addWorksheet('Dictionary')
-  sheet.getColumn(1).width = 25
-  sheet.getColumn(2).width = 40
+  const sheet = workbook.addWorksheet('Data dictionary')
+  const fields = buildDictFields(lookups)
 
-  let row = 1
+  // Compute max options length to know how many rows we need
+  const maxOptions = Math.max(...fields.map(f => f.options?.length || 0))
 
-  // 1. Sex
-  row = addDictionaryTable(sheet, 'Sex', ['Value', 'Label'], [
-    [0, 'Female'],
-    [1, 'Male'],
-  ], row)
+  // Build column mapping: each field takes 2 cols if enum, 1 col otherwise
+  const colMap: { field: DictField; startCol: number; colSpan: number }[] = []
+  let col = 1
+  for (const f of fields) {
+    const span = f.type === 'enum' ? 2 : 1
+    colMap.push({ field: f, startCol: col, colSpan: span })
+    col += span
+  }
+  const totalCols = col - 1
 
-  // 2. Wards of Admission
-  row = addDictionaryTable(sheet, 'Wards of Admission', ['ID', 'Name'],
-    lookups.wards.map((w) => [w.id, w.name]), row)
+  // Set column widths
+  for (let c = 1; c <= totalCols; c++) {
+    sheet.getColumn(c).width = 20
+  }
 
-  // 3. BSI Onset
-  row = addDictionaryTable(sheet, 'BSI Onset', ['Value', 'Label'], [
-    [0, 'Community-acquired'],
-    [1, 'Hospital-acquired'],
-  ], row)
+  // --- Row 1: Section headers ---
+  const sectionHeaderFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
+  const sectionHeaderFont: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
 
-  // 4. Sites of Isolation
-  row = addDictionaryTable(sheet, 'Sites of Isolation', ['ID', 'Name'],
-    lookups.sites.map((s) => [s.id, s.name]), row)
+  // Group fields by section to merge section headers
+  let prevSection = ''
+  let sectionStart = 0
+  const sectionRanges: { section: string; start: number; end: number }[] = []
+  for (const cm of colMap) {
+    if (cm.field.section !== prevSection) {
+      if (prevSection) {
+        sectionRanges.push({ section: prevSection, start: sectionStart, end: cm.startCol - 1 })
+      }
+      prevSection = cm.field.section
+      sectionStart = cm.startCol
+    }
+  }
+  if (prevSection) {
+    sectionRanges.push({ section: prevSection, start: sectionStart, end: totalCols })
+  }
 
-  // 5. Rectal Colonization Status
-  row = addDictionaryTable(sheet, 'Rectal Colonization Status', ['Value', 'Label'], [
-    [0, 'No'],
-    [1, 'Yes'],
-  ], row)
+  for (const sr of sectionRanges) {
+    const cell = sheet.getCell(1, sr.start)
+    cell.value = sr.section
+    cell.font = sectionHeaderFont
+    cell.fill = sectionHeaderFill
+    cell.alignment = { horizontal: 'center' }
+    if (sr.end > sr.start) {
+      sheet.mergeCells(1, sr.start, 1, sr.end)
+    }
+    // Fill background on all cells in range
+    for (let c = sr.start; c <= sr.end; c++) {
+      const fc = sheet.getCell(1, c)
+      fc.fill = sectionHeaderFill
+    }
+  }
 
-  // 6. BSI Pathogens
-  row = addDictionaryTable(sheet, 'BSI Pathogens', ['ID', 'Name'],
-    lookups.bsiPathogens.map((p) => [p.id, p.name]), row)
+  // --- Row 2: Field names ---
+  const fieldNameFont: Partial<ExcelJS.Font> = { bold: true, size: 10 }
+  const fieldNameFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E2F3' } }
+  for (const cm of colMap) {
+    const cell = sheet.getCell(2, cm.startCol)
+    cell.value = cm.field.name
+    cell.font = fieldNameFont
+    cell.fill = fieldNameFill
+    cell.alignment = { wrapText: true }
+    if (cm.colSpan === 2) {
+      sheet.mergeCells(2, cm.startCol, 2, cm.startCol + 1)
+      sheet.getCell(2, cm.startCol + 1).fill = fieldNameFill
+    }
+  }
 
-  // 7. Resistance Profiles
-  row = addDictionaryTable(sheet, 'Resistance Profiles', ['ID', 'Name'],
-    lookups.resistanceProfiles.map((r) => [r.id, r.name]), row)
+  // --- Row 3: Descriptions ---
+  const descFont: Partial<ExcelJS.Font> = { italic: true, size: 9, color: { argb: 'FF666666' } }
+  for (const cm of colMap) {
+    if (cm.field.description) {
+      const cell = sheet.getCell(3, cm.startCol)
+      cell.value = cm.field.description
+      cell.font = descFont
+      cell.alignment = { wrapText: true }
+      if (cm.colSpan === 2) {
+        sheet.mergeCells(3, cm.startCol, 3, cm.startCol + 1)
+      }
+    }
+  }
 
-  // 8. AST Values
-  row = addDictionaryTable(sheet, 'AST Values', ['Value', 'Label'], [
-    [0, 'Not available / not tested'],
-    [1, 'Resistant'],
-    [2, 'Susceptible'],
-    [3, 'Intermediate'],
-  ], row)
+  // --- Row 4+: Values ---
+  for (let i = 0; i < maxOptions; i++) {
+    const rowNum = 4 + i
+    for (const cm of colMap) {
+      if (cm.field.type === 'enum' && cm.field.options && i < cm.field.options.length) {
+        const opt = cm.field.options[i]
+        sheet.getCell(rowNum, cm.startCol).value = opt.id
+        sheet.getCell(rowNum, cm.startCol).alignment = { horizontal: 'center' }
+        sheet.getCell(rowNum, cm.startCol + 1).value = opt.label
+      } else if (cm.field.type === 'numeric' && i === 0) {
+        sheet.getCell(rowNum, cm.startCol).value = 'numeric value'
+        sheet.getCell(rowNum, cm.startCol).font = { italic: true, color: { argb: 'FF888888' } }
+      } else if (cm.field.type === 'date' && i === 0) {
+        sheet.getCell(rowNum, cm.startCol).value = 'Date (dd/mm/yyyy)'
+        sheet.getCell(rowNum, cm.startCol).font = { italic: true, color: { argb: 'FF888888' } }
+      } else if (cm.field.type === 'text' && cm.field.options && i < cm.field.options.length) {
+        sheet.getCell(rowNum, cm.startCol).value = cm.field.options[i].label
+        sheet.getCell(rowNum, cm.startCol).font = { italic: true, color: { argb: 'FF888888' } }
+      }
+    }
+  }
 
-  // 9. Mono/Poli Microbial
-  row = addDictionaryTable(sheet, 'Mono/Poli Microbial', ['Value', 'Label'], [
-    [0, 'Mono-microbial'],
-    [1, 'Poli-microbial'],
-  ], row)
-
-  // 10. Antimicrobial Therapies
-  row = addDictionaryTable(sheet, 'Antimicrobial Therapies', ['ID', 'Name'],
-    lookups.therapies.map((t) => [t.id, t.name]), row)
-
-  // 11. AST Antibiotics
-  row = addDictionaryTable(sheet, 'AST Antibiotics', ['ID', 'Name'],
-    lookups.astAntibiotics.map((a) => [a.id, a.name]), row)
-
-  // 12. Combination Therapy
-  row = addDictionaryTable(sheet, 'Combination Therapy', ['Value', 'Label'], [
-    [0, 'No'],
-    [1, 'Yes'],
-  ], row)
-
-  // 13. 30-day Mortality
-  addDictionaryTable(sheet, '30-day Mortality', ['Value', 'Label'], [
-    [0, 'Non-survivor'],
-    [1, 'Survivor'],
-  ], row)
+  // Freeze first 3 rows
+  sheet.views = [{ state: 'frozen', ySplit: 3 }]
 }
 
 export async function exportPatientsToExcel(patients: any[], lookups: Lookups): Promise<void> {
   const workbook = new ExcelJS.Workbook()
 
-  // Sort antibiotics by id for consistent column order
-  const antibiotics = [...lookups.astAntibiotics].sort((a, b) => a.id - b.id)
+  // Sort all lookups by id for consistent order
+  lookups.wards = [...lookups.wards].sort((a, b) => a.id - b.id)
+  lookups.sites = [...lookups.sites].sort((a, b) => a.id - b.id)
+  lookups.therapies = [...lookups.therapies].sort((a, b) => a.id - b.id)
+  lookups.bsiPathogens = [...lookups.bsiPathogens].sort((a, b) => a.id - b.id)
+  lookups.resistanceProfiles = [...lookups.resistanceProfiles].sort((a, b) => a.id - b.id)
+  lookups.astAntibiotics = [...lookups.astAntibiotics].sort((a, b) => a.id - b.id)
+  const antibiotics = lookups.astAntibiotics
 
   const counts = computeDynamicCounts(patients)
   const headers = buildHeaders(counts, antibiotics)

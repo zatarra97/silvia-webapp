@@ -113,12 +113,12 @@ const PatientDetail = () => {
     const fetchLookups = async () => {
       try {
         const [wardData, siteData, therapyData, bsiPathogenData, rpData, astData] = await Promise.all([
-          getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'name ASC'),
-          getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'name ASC'),
-          getList(ENTITIES.ANTIMICROBIAL_THERAPIES, {}, { limit: 1000 }, 'name ASC'),
-          getList(ENTITIES.BSI_PATHOGENS, {}, { limit: 1000 }, 'name ASC'),
-          getList(ENTITIES.RESISTANCE_PROFILES, {}, { limit: 1000 }, 'name ASC'),
-          getList(ENTITIES.AST_ANTIBIOTICS, {}, { limit: 1000 }, 'name ASC'),
+          getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'id ASC'),
+          getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'id ASC'),
+          getList(ENTITIES.ANTIMICROBIAL_THERAPIES, {}, { limit: 1000 }, 'id ASC'),
+          getList(ENTITIES.BSI_PATHOGENS, {}, { limit: 1000 }, 'id ASC'),
+          getList(ENTITIES.RESISTANCE_PROFILES, {}, { limit: 1000 }, 'id ASC'),
+          getList(ENTITIES.AST_ANTIBIOTICS, {}, { limit: 1000 }, 'id ASC'),
         ])
         setWards(wardData)
         setSitesOptions(siteData)

@@ -92,7 +92,7 @@ const AstAntibioticList = () => {
     setLoading(true)
     try {
       const [data, count] = await Promise.all([
-        getList(ENTITIES.AST_ANTIBIOTICS, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'name ASC'),
+        getList(ENTITIES.AST_ANTIBIOTICS, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'id ASC'),
         getCountWhere(ENTITIES.AST_ANTIBIOTICS, {}),
       ])
       setItems(data)

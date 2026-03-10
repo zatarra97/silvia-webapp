@@ -135,7 +135,7 @@ const SiteList = () => {
     setLoading(true)
     try {
       const [data, count] = await Promise.all([
-        getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'name ASC'),
+        getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'id ASC'),
         getCountWhere(ENTITIES.SITES_OF_ISOLATION, {}),
       ])
       setSites(data)

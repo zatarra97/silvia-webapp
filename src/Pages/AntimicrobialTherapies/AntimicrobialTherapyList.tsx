@@ -135,7 +135,7 @@ const AntimicrobialTherapyList = () => {
     setLoading(true)
     try {
       const [data, count] = await Promise.all([
-        getList(ENTITIES.ANTIMICROBIAL_THERAPIES, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'name ASC'),
+        getList(ENTITIES.ANTIMICROBIAL_THERAPIES, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'id ASC'),
         getCountWhere(ENTITIES.ANTIMICROBIAL_THERAPIES, {}),
       ])
       setTherapies(data)

@@ -43,8 +43,8 @@ const PatientList = () => {
     const fetchLookups = async () => {
       try {
         const [wardData, siteData] = await Promise.all([
-          getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'name ASC'),
-          getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'name ASC'),
+          getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'id ASC'),
+          getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'id ASC'),
         ])
         setWards(wardData)
         setSites(siteData)
@@ -59,13 +59,13 @@ const PatientList = () => {
     setExporting(true)
     try {
       const [allPatients, wardData, siteData, therapyData, bsiPathogenData, rpData, astData] = await Promise.all([
-        getList(ENTITIES.PATIENTS, {}, { limit: 100000 }, 'name ASC'),
-        getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'name ASC'),
-        getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'name ASC'),
-        getList(ENTITIES.ANTIMICROBIAL_THERAPIES, {}, { limit: 1000 }, 'name ASC'),
-        getList(ENTITIES.BSI_PATHOGENS, {}, { limit: 1000 }, 'name ASC'),
-        getList(ENTITIES.RESISTANCE_PROFILES, {}, { limit: 1000 }, 'name ASC'),
-        getList(ENTITIES.AST_ANTIBIOTICS, {}, { limit: 1000 }, 'name ASC'),
+        getList(ENTITIES.PATIENTS, {}, { limit: 100000 }, 'id ASC'),
+        getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'id ASC'),
+        getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'id ASC'),
+        getList(ENTITIES.ANTIMICROBIAL_THERAPIES, {}, { limit: 1000 }, 'id ASC'),
+        getList(ENTITIES.BSI_PATHOGENS, {}, { limit: 1000 }, 'id ASC'),
+        getList(ENTITIES.RESISTANCE_PROFILES, {}, { limit: 1000 }, 'id ASC'),
+        getList(ENTITIES.AST_ANTIBIOTICS, {}, { limit: 1000 }, 'id ASC'),
       ])
       await exportPatientsToExcel(allPatients, {
         wards: wardData,
@@ -103,7 +103,7 @@ const PatientList = () => {
     setLoading(true)
     try {
       const [data, count] = await Promise.all([
-        getList(ENTITIES.PATIENTS, filters, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'name ASC'),
+        getList(ENTITIES.PATIENTS, filters, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'id ASC'),
         getCountWhere(ENTITIES.PATIENTS, buildWhere(filters)),
       ])
       setPatients(data)

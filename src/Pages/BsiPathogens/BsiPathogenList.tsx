@@ -92,7 +92,7 @@ const BsiPathogenList = () => {
     setLoading(true)
     try {
       const [data, count] = await Promise.all([
-        getList(ENTITIES.BSI_PATHOGENS, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'name ASC'),
+        getList(ENTITIES.BSI_PATHOGENS, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'id ASC'),
         getCountWhere(ENTITIES.BSI_PATHOGENS, {}),
       ])
       setItems(data)

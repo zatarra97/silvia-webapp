@@ -135,7 +135,7 @@ const WardList = () => {
     setLoading(true)
     try {
       const [data, count] = await Promise.all([
-        getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'name ASC'),
+        getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: itemsPerPage, skip: (currentPage - 1) * itemsPerPage }, 'id ASC'),
         getCountWhere(ENTITIES.WARDS_OF_ADMISSION, {}),
       ])
       setWards(data)
