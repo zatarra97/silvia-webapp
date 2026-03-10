@@ -9,7 +9,7 @@ const packageJson = JSON.parse(readFileSync("./package.json", "utf8"))
 
 // https://vite.dev/config/
 export default defineConfig({
-	base: "/siliva-webapp/",
+	base: "/silvia-webapp/",
 	plugins: [react(), tailwindcss(), flowbiteReact()],
 	build: {
 		outDir: "build",
