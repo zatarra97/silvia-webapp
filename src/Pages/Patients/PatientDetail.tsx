@@ -590,7 +590,7 @@ const PatientDetail = () => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <Select
                       label="Pathogen"
                       name={`bsiPathogen_${bsiIndex}`}
@@ -598,6 +598,12 @@ const PatientDetail = () => {
                       options={bsiPathogenSelectOptions}
                       onChange={(e) => updateBsiPathogenId(bsiIndex, e.target.value)}
                     />
+                    {isolationSites[bsiIndex]?.siteOfIsolationId && (
+                      <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
+                        <span className="text-xs text-amber-500 font-medium">Site of isolation:</span>{' '}
+                        {sitesOptions.find((s) => String(s.id) === String(isolationSites[bsiIndex].siteOfIsolationId))?.name || '-'}
+                      </div>
+                    )}
                   </div>
 
                   {/* Resistance profiles */}
