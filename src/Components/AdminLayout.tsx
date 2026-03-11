@@ -28,11 +28,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 
 			{/* ── Sidebar ──────────────────────────────────────────────── */}
 			<aside
-				className={`flex flex-col shrink-0 bg-white border-r border-gray-200 transition-all duration-300 ${
+				className={`flex flex-col shrink-0 overflow-hidden bg-white border-r border-gray-200 transition-all duration-300 ${
 					expanded ? "w-60" : "w-[68px]"
 				}`}
 			>
-				{/* Logo */}
+				{/* Logo + Toggle */}
 				<div
 					className={`flex items-center h-16 shrink-0 border-b border-gray-100 ${
 						expanded ? "px-5 gap-2.5" : "justify-center px-4"
@@ -40,10 +40,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 				>
 					<i className="fa-solid fa-staff-snake text-blue-600 text-lg shrink-0" aria-hidden />
 					{expanded && (
-						<span className="font-bold text-gray-800 text-sm tracking-wide whitespace-nowrap">
+						<span className="font-bold text-gray-800 text-sm tracking-wide whitespace-nowrap flex-1">
 							SIS Medical
 						</span>
 					)}
+					<button
+						onClick={() => setExpanded((prev) => !prev)}
+						aria-label="Espandi/comprimi sidebar"
+						className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
+					>
+						<i className="fa-solid fa-bars text-sm" aria-hidden />
+					</button>
 				</div>
 
 				{/* Nav items */}
@@ -55,7 +62,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 							end={item.end}
 							title={!expanded ? item.label : undefined}
 							className={({ isActive }) =>
-								`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
+								`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
 									isActive
 										? "bg-blue-600 text-white shadow-sm"
 										: "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
@@ -66,13 +73,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 								<>
 									<i className={`${item.icon} w-4 text-center shrink-0`} aria-hidden />
 									{expanded && <span className="flex-1 truncate">{item.label}</span>}
-
-									{/* Tooltip per sidebar collassata */}
-									{!expanded && (
-										<span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
-											{item.label}
-										</span>
-									)}
 								</>
 							)}
 						</NavLink>
@@ -118,36 +118,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, userEmail, onLogout
 				</div>
 			</aside>
 
-			{/* ── Right side ───────────────────────────────────────────── */}
-			<div className="flex flex-col flex-1 min-w-0">
-
-				{/* Top bar */}
-				<header className="flex items-center h-16 px-5 bg-white border-b border-gray-200 shrink-0 gap-4">
-					<button
-						onClick={() => setExpanded((prev) => !prev)}
-						aria-label="Espandi/comprimi sidebar"
-						className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
-					>
-						<i className="fa-solid fa-bars" aria-hidden />
-					</button>
-
-					<div className="flex-1" />
-
-					<div className="flex items-center gap-3">
-						<span className="hidden sm:block text-sm text-gray-500 sm:truncate sm:max-w-[200px] md:overflow-visible md:text-clip md:max-w-none">
-							{userEmail}
-						</span>
-						<div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
-							{avatarLetter}
-						</div>
-					</div>
-				</header>
-
-				{/* Page content */}
-				<main className="flex-1 min-h-0 overflow-y-auto">
-					{children}
-				</main>
-			</div>
+			{/* ── Content ──────────────────────────────────────────────── */}
+			<main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+				{children}
+			</main>
 		</div>
 	)
 }

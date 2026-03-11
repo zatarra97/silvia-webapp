@@ -50,11 +50,17 @@ const AST_VALUE_OPTIONS = [
   { value: 3, label: 'Intermediate' },
 ]
 
+interface AstResultEntry {
+  astAntibioticId: number | null
+  astValue: number | string | null
+  micValue: string
+}
+
 interface BsiPathogenEntry {
   bsiPathogenId: number | string | null
   siteOfIsolationId: number | string | null
   resistanceProfileIds: number[]
-  astResults: { astAntibioticId: number; astValue: number | string | null; micValue: string }[]
+  astResults: AstResultEntry[]
 }
 
 const ordinal = (n: number) => {
@@ -79,6 +85,7 @@ const PatientDetail = () => {
   const [empiricalTherapies, setEmpiricalTherapies] = useState<{ antimicrobialTherapyId: string | number | null }[]>([])
   const [targetedTherapies, setTargetedTherapies] = useState<{ antimicrobialTherapyId: string | number | null }[]>([])
   const [bsiPathogens, setBsiPathogens] = useState<BsiPathogenEntry[]>([])
+  const [infectiousComplications, setInfectiousComplications] = useState<BsiPathogenEntry[]>([])
 
   const {
     register,
@@ -133,6 +140,20 @@ const PatientDetail = () => {
     fetchLookups()
   }, [])
 
+  const mapPathogenEntries = (pathogens: any[], isolationSites: any[] | undefined): BsiPathogenEntry[] =>
+    pathogens.map((bp: any, idx: number) => ({
+      bsiPathogenId: bp.bsiPathogenId ?? null,
+      siteOfIsolationId: isolationSites?.[idx]?.siteOfIsolationId ?? null,
+      resistanceProfileIds: bp.resistanceProfiles
+        ? bp.resistanceProfiles.map((rp: any) => rp.resistanceProfileId)
+        : [],
+      astResults: (bp.astResults || []).map((ar: any) => ({
+        astAntibioticId: ar.astAntibioticId,
+        astValue: ar.astValue ?? null,
+        micValue: ar.micValue || '',
+      })),
+    }))
+
   useEffect(() => {
     if (!isEdit || astAntibioticsOptions.length === 0) return
     const fetchPatient = async () => {
@@ -172,23 +193,10 @@ const PatientDetail = () => {
           )
         }
         if (data.bsiPathogens && data.bsiPathogens.length > 0) {
-          setBsiPathogens(
-            data.bsiPathogens.map((bp: any, idx: number) => ({
-              bsiPathogenId: bp.bsiPathogenId ?? null,
-              siteOfIsolationId: data.isolationSites?.[idx]?.siteOfIsolationId ?? null,
-              resistanceProfileIds: bp.resistanceProfiles
-                ? bp.resistanceProfiles.map((rp: any) => rp.resistanceProfileId)
-                : [],
-              astResults: astAntibioticsOptions.map((ab: any) => {
-                const existing = bp.astResults?.find((ar: any) => ar.astAntibioticId === ab.id)
-                return {
-                  astAntibioticId: ab.id,
-                  astValue: existing?.astValue ?? null,
-                  micValue: existing?.micValue || '',
-                }
-              }),
-            }))
-          )
+          setBsiPathogens(mapPathogenEntries(data.bsiPathogens, data.isolationSites))
+        }
+        if (data.infectiousComplications && data.infectiousComplications.length > 0) {
+          setInfectiousComplications(mapPathogenEntries(data.infectiousComplications, undefined))
         }
       } catch (e) {
         toast.error('Errore nel caricamento del paziente')
@@ -201,6 +209,24 @@ const PatientDetail = () => {
   }, [id, isEdit, reset, astAntibioticsOptions])
 
   const toNum = (v: any) => (v !== null && v !== '' && v !== undefined ? Number(v) : null)
+
+  const buildPathogenPayload = (entries: BsiPathogenEntry[]) =>
+    entries
+      .filter((bp) => bp.bsiPathogenId !== null && bp.bsiPathogenId !== '')
+      .map((bp, idx) => ({
+        bsiPathogenId: Number(bp.bsiPathogenId),
+        pathogenOrder: idx + 1,
+        resistanceProfiles: bp.resistanceProfileIds.map((rpId) => ({
+          resistanceProfileId: rpId,
+        })),
+        astResults: bp.astResults
+          .filter((ar) => ar.astAntibioticId !== null)
+          .map((ar) => ({
+            astAntibioticId: ar.astAntibioticId!,
+            astValue: ar.astValue !== null && ar.astValue !== '' ? Number(ar.astValue) : null,
+            micValue: ar.micValue || null,
+          })),
+      }))
 
   const onSubmit = async (formData: PatientFormData) => {
     setSaving(true)
@@ -231,22 +257,8 @@ const PatientDetail = () => {
         targetedTherapies: targetedTherapies
           .filter((t) => t.antimicrobialTherapyId !== null && t.antimicrobialTherapyId !== '')
           .map((t, idx) => ({ antimicrobialTherapyId: Number(t.antimicrobialTherapyId), therapyOrder: idx + 1 })),
-        bsiPathogens: bsiPathogens
-          .filter((bp) => bp.bsiPathogenId !== null && bp.bsiPathogenId !== '')
-          .map((bp, idx) => ({
-            bsiPathogenId: Number(bp.bsiPathogenId),
-            pathogenOrder: idx + 1,
-            resistanceProfiles: bp.resistanceProfileIds.map((rpId) => ({
-              resistanceProfileId: rpId,
-            })),
-            astResults: bp.astResults
-              .filter((ar) => ar.astValue !== null && ar.astValue !== '')
-              .map((ar) => ({
-                astAntibioticId: ar.astAntibioticId,
-                astValue: Number(ar.astValue),
-                micValue: ar.micValue || null,
-              })),
-          })),
+        bsiPathogens: buildPathogenPayload(bsiPathogens),
+        infectiousComplications: buildPathogenPayload(infectiousComplications),
       }
 
       if (isEdit) {
@@ -291,62 +303,107 @@ const PatientDetail = () => {
     )
   }
 
-  // BSI Pathogens helpers
-  const createEmptyBsiPathogen = (): BsiPathogenEntry => ({
+  // Shared pathogen entry factory
+  const createEmptyPathogenEntry = (): BsiPathogenEntry => ({
     bsiPathogenId: null,
     siteOfIsolationId: null,
     resistanceProfileIds: [],
-    astResults: astAntibioticsOptions.map((ab) => ({
-      astAntibioticId: ab.id,
-      astValue: null,
-      micValue: '',
-    })),
+    astResults: [],
   })
 
-  const addBsiPathogen = () => {
-    setBsiPathogens((prev) => [...prev, createEmptyBsiPathogen()])
+  // Generic pathogen state updater
+  const updatePathogenState = (
+    setter: React.Dispatch<React.SetStateAction<BsiPathogenEntry[]>>,
+    index: number,
+    updater: (entry: BsiPathogenEntry) => BsiPathogenEntry,
+  ) => {
+    setter((prev) => prev.map((item, i) => (i === index ? updater(item) : item)))
   }
-  const removeBsiPathogen = (index: number) => {
-    setBsiPathogens((prev) => prev.filter((_, i) => i !== index))
-  }
-  const updateBsiPathogenId = (index: number, value: string | number | null) => {
-    setBsiPathogens((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, bsiPathogenId: value } : item))
-    )
-  }
-  const updateBsiSiteOfIsolation = (index: number, value: string | number | null) => {
-    setBsiPathogens((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, siteOfIsolationId: value } : item))
-    )
-  }
-  const toggleResistanceProfile = (bsiIndex: number, rpId: number) => {
-    setBsiPathogens((prev) =>
-      prev.map((item, i) => {
-        if (i !== bsiIndex) return item
-        const ids = item.resistanceProfileIds.includes(rpId)
-          ? item.resistanceProfileIds.filter((id) => id !== rpId)
-          : [...item.resistanceProfileIds, rpId]
-        return { ...item, resistanceProfileIds: ids }
-      })
-    )
-  }
-  const updateAstValue = (bsiIndex: number, antibioticId: number, field: 'astValue' | 'micValue', value: any) => {
-    setBsiPathogens((prev) =>
-      prev.map((item, i) => {
-        if (i !== bsiIndex) return item
-        const astResults = item.astResults.map((ar) =>
-          ar.astAntibioticId === antibioticId ? { ...ar, [field]: value } : ar
-        )
-        return { ...item, astResults }
-      })
-    )
-  }
+
+  // BSI Pathogens helpers
+  const addBsiPathogen = () => setBsiPathogens((prev) => [...prev, createEmptyPathogenEntry()])
+  const removeBsiPathogen = (index: number) => setBsiPathogens((prev) => prev.filter((_, i) => i !== index))
+  const updateBsiPathogenId = (index: number, value: string | number | null) =>
+    updatePathogenState(setBsiPathogens, index, (e) => ({ ...e, bsiPathogenId: value }))
+  const updateBsiSiteOfIsolation = (index: number, value: string | number | null) =>
+    updatePathogenState(setBsiPathogens, index, (e) => ({ ...e, siteOfIsolationId: value }))
+  const toggleBsiResistanceProfile = (bsiIndex: number, rpId: number) =>
+    updatePathogenState(setBsiPathogens, bsiIndex, (e) => ({
+      ...e,
+      resistanceProfileIds: e.resistanceProfileIds.includes(rpId)
+        ? e.resistanceProfileIds.filter((id) => id !== rpId)
+        : [...e.resistanceProfileIds, rpId],
+    }))
+  const updateBsiAstValue = (bsiIndex: number, antibioticId: number, field: 'astValue' | 'micValue', value: any) =>
+    updatePathogenState(setBsiPathogens, bsiIndex, (e) => ({
+      ...e,
+      astResults: e.astResults.map((ar) =>
+        ar.astAntibioticId === antibioticId ? { ...ar, [field]: value } : ar
+      ),
+    }))
+  const updateBsiAstAntibioticId = (bsiIndex: number, astIndex: number, value: string | number | null) =>
+    updatePathogenState(setBsiPathogens, bsiIndex, (e) => ({
+      ...e,
+      astResults: e.astResults.map((ar, i) =>
+        i === astIndex ? { ...ar, astAntibioticId: value !== null && value !== '' ? Number(value) : null } : ar
+      ),
+    }))
+  const addBsiAstResult = (bsiIndex: number) =>
+    updatePathogenState(setBsiPathogens, bsiIndex, (e) => ({
+      ...e,
+      astResults: [...e.astResults, { astAntibioticId: null, astValue: null, micValue: '' }],
+    }))
+  const removeBsiAstResult = (bsiIndex: number, astIndex: number) =>
+    updatePathogenState(setBsiPathogens, bsiIndex, (e) => ({
+      ...e,
+      astResults: e.astResults.filter((_, i) => i !== astIndex),
+    }))
+
+  // Infectious Complications helpers
+  const addIcPathogen = () => setInfectiousComplications((prev) => [...prev, createEmptyPathogenEntry()])
+  const removeIcPathogen = (index: number) => setInfectiousComplications((prev) => prev.filter((_, i) => i !== index))
+  const updateIcPathogenId = (index: number, value: string | number | null) =>
+    updatePathogenState(setInfectiousComplications, index, (e) => ({ ...e, bsiPathogenId: value }))
+  const updateIcSiteOfIsolation = (index: number, value: string | number | null) =>
+    updatePathogenState(setInfectiousComplications, index, (e) => ({ ...e, siteOfIsolationId: value }))
+  const toggleIcResistanceProfile = (icIndex: number, rpId: number) =>
+    updatePathogenState(setInfectiousComplications, icIndex, (e) => ({
+      ...e,
+      resistanceProfileIds: e.resistanceProfileIds.includes(rpId)
+        ? e.resistanceProfileIds.filter((id) => id !== rpId)
+        : [...e.resistanceProfileIds, rpId],
+    }))
+  const updateIcAstValue = (icIndex: number, antibioticId: number, field: 'astValue' | 'micValue', value: any) =>
+    updatePathogenState(setInfectiousComplications, icIndex, (e) => ({
+      ...e,
+      astResults: e.astResults.map((ar) =>
+        ar.astAntibioticId === antibioticId ? { ...ar, [field]: value } : ar
+      ),
+    }))
+  const updateIcAstAntibioticId = (icIndex: number, astIndex: number, value: string | number | null) =>
+    updatePathogenState(setInfectiousComplications, icIndex, (e) => ({
+      ...e,
+      astResults: e.astResults.map((ar, i) =>
+        i === astIndex ? { ...ar, astAntibioticId: value !== null && value !== '' ? Number(value) : null } : ar
+      ),
+    }))
+  const addIcAstResult = (icIndex: number) =>
+    updatePathogenState(setInfectiousComplications, icIndex, (e) => ({
+      ...e,
+      astResults: [...e.astResults, { astAntibioticId: null, astValue: null, micValue: '' }],
+    }))
+  const removeIcAstResult = (icIndex: number, astIndex: number) =>
+    updatePathogenState(setInfectiousComplications, icIndex, (e) => ({
+      ...e,
+      astResults: e.astResults.filter((_, i) => i !== astIndex),
+    }))
 
   const wardOptions = wards.map((w) => ({ value: w.id, label: w.name }))
   const siteSelectOptions = sitesOptions.map((s) => ({ value: s.id, label: s.name }))
   const therapySelectOptions = therapiesOptions.map((t) => ({ value: t.id, label: t.name }))
   const bsiPathogenSelectOptions = bsiPathogensOptions.map((p) => ({ value: p.id, label: p.name }))
   const rectalPathogenSelectOptions = bsiPathogensOptions.map((p) => ({ value: p.id, label: p.name }))
+  const allAntibioticOptions = astAntibioticsOptions.map((a) => ({ value: a.id, label: a.name }))
 
   if (loading) {
     return (
@@ -363,6 +420,241 @@ const PatientDetail = () => {
         </div>
       </div>
     )
+  }
+
+  // Render a pathogen group (BSI or IC) with configurable colors and callbacks
+  const renderPathogenGroup = (
+    entries: BsiPathogenEntry[],
+    config: {
+      title: string
+      label: string
+      borderDashed: string
+      titleColor: string
+      cardBorder: string
+      headerColor: string
+      pillSelected: string
+      pillHover: string
+      tableHeaderBg: string
+      tableHeaderText: string
+      tableBorder: string
+      tableRowHover: string
+      micFocus: string
+      addBtnBg: string
+      addBtnText: string
+      addBtnHover: string
+    },
+    callbacks: {
+      updatePathogenId: (index: number, value: string | number | null) => void
+      updateSiteOfIsolation: (index: number, value: string | number | null) => void
+      toggleResistanceProfile: (index: number, rpId: number) => void
+      updateAstValue: (index: number, antibioticId: number, field: 'astValue' | 'micValue', value: any) => void
+      updateAstAntibioticId: (pathogenIndex: number, astIndex: number, value: string | number | null) => void
+      addAstResult: (pathogenIndex: number) => void
+      removeAstResult: (pathogenIndex: number, astIndex: number) => void
+      remove: (index: number) => void
+      add: () => void
+    },
+    namePrefix: string,
+  ) => (
+    <div className={`mt-6 border-2 border-dashed ${config.borderDashed} rounded-lg p-4`}>
+      <h3 className={`text-base font-semibold ${config.titleColor} mb-4`}>{config.title}</h3>
+
+      {entries.map((bp, idx) => {
+        const usedAntibioticIds = bp.astResults
+          .map((ar) => ar.astAntibioticId)
+          .filter((id): id is number => id !== null)
+
+        return (
+          <div key={idx} className={`border ${config.cardBorder} rounded-lg p-4 bg-white ${idx > 0 ? 'mt-4' : ''}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className={`text-sm font-semibold ${config.headerColor}`}>{ordinal(idx + 1)} {config.label}</h4>
+              <button
+                type="button"
+                onClick={() => callbacks.remove(idx)}
+                className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-sm"
+                title={`Remove ${config.label.toLowerCase()}`}
+              >
+                <i className="fa-solid fa-trash mr-1"></i>
+                Remove
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label="Pathogen"
+                name={`${namePrefix}Pathogen_${idx}`}
+                value={bp.bsiPathogenId}
+                options={bsiPathogenSelectOptions}
+                onChange={(e) => callbacks.updatePathogenId(idx, e.target.value)}
+              />
+              <Select
+                label="Site of isolation"
+                name={`${namePrefix}SiteOfIsolation_${idx}`}
+                value={bp.siteOfIsolationId}
+                options={siteSelectOptions}
+                onChange={(e) => callbacks.updateSiteOfIsolation(idx, e.target.value)}
+              />
+            </div>
+
+            {/* Resistance profiles */}
+            <div className="mt-4">
+              <label className="form-label">Resistance profiles</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {resistanceProfilesOptions.map((rp) => (
+                  <button
+                    key={rp.id}
+                    type="button"
+                    onClick={() => callbacks.toggleResistanceProfile(idx, rp.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                      bp.resistanceProfileIds.includes(rp.id)
+                        ? config.pillSelected
+                        : `bg-white text-gray-600 border-gray-300 ${config.pillHover}`
+                    }`}
+                  >
+                    {rp.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AST / MIC results */}
+            <div className="mt-4">
+              <label className="form-label">AST / MIC results</label>
+
+              {bp.astResults.length > 0 && (
+                <div className="mt-1 overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className={config.tableHeaderBg}>
+                        <th className={`text-left px-3 py-2 font-medium ${config.tableHeaderText} border ${config.tableBorder}`}>Antibiotic</th>
+                        <th className={`text-left px-3 py-2 font-medium ${config.tableHeaderText} border ${config.tableBorder} w-64`}>AST</th>
+                        <th className={`text-left px-3 py-2 font-medium ${config.tableHeaderText} border ${config.tableBorder} w-32`}>MIC</th>
+                        <th className={`px-2 py-2 border ${config.tableBorder} w-10`}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bp.astResults.map((ar, astIdx) => {
+                        const availableOptions = allAntibioticOptions.filter(
+                          (opt) => opt.value === ar.astAntibioticId || !usedAntibioticIds.includes(opt.value)
+                        )
+                        return (
+                          <tr key={astIdx} className={config.tableRowHover}>
+                            <td className={`px-1 py-1 border ${config.tableBorder}`}>
+                              <Select
+                                name={`${namePrefix}AstAntibiotic_${idx}_${astIdx}`}
+                                value={ar.astAntibioticId}
+                                options={availableOptions}
+                                onChange={(e) => callbacks.updateAstAntibioticId(idx, astIdx, e.target.value)}
+                              />
+                            </td>
+                            <td className={`px-1 py-1 border ${config.tableBorder}`}>
+                              <Select
+                                name={`${namePrefix}Ast_${idx}_${astIdx}`}
+                                value={ar.astValue}
+                                options={AST_VALUE_OPTIONS}
+                                onChange={(e) => {
+                                  if (ar.astAntibioticId !== null) {
+                                    callbacks.updateAstValue(idx, ar.astAntibioticId, 'astValue', e.target.value)
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td className={`px-1 py-1 border ${config.tableBorder}`}>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={ar.micValue}
+                                  onChange={(e) => {
+                                    if (ar.astAntibioticId !== null) {
+                                      callbacks.updateAstValue(idx, ar.astAntibioticId, 'micValue', e.target.value)
+                                    }
+                                  }}
+                                  className={`w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm ${config.micFocus} outline-none`}
+                                  placeholder="MIC"
+                                />
+                                <span className="text-xs text-gray-500 whitespace-nowrap">μg/mL</span>
+                              </div>
+                            </td>
+                            <td className={`px-1 py-1 border ${config.tableBorder} text-center`}>
+                              <button
+                                type="button"
+                                onClick={() => callbacks.removeAstResult(idx, astIdx)}
+                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                title="Remove antibiotic"
+                              >
+                                <i className="fa-solid fa-xmark text-sm"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {usedAntibioticIds.length < astAntibioticsOptions.length && (
+                <button
+                  type="button"
+                  onClick={() => callbacks.addAstResult(idx)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${config.addBtnBg} ${config.addBtnText} ${config.addBtnHover} ${bp.astResults.length > 0 ? 'mt-2' : 'mt-1'}`}
+                >
+                  <i className="fa-solid fa-plus"></i>
+                  Add antibiotic
+                </button>
+              )}
+            </div>
+          </div>
+        )
+      })}
+
+      <button
+        type="button"
+        onClick={callbacks.add}
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${config.addBtnBg} ${config.addBtnText} ${config.addBtnHover} w-auto ${entries.length > 0 ? 'mt-4' : ''}`}
+      >
+        <i className="fa-solid fa-plus"></i>
+        Add {config.label.toLowerCase()}
+      </button>
+    </div>
+  )
+
+  const BSI_CONFIG = {
+    title: 'BSI Causative pathogen',
+    label: 'BSI pathogen',
+    borderDashed: 'border-amber-300',
+    titleColor: 'text-amber-700',
+    cardBorder: 'border-amber-200',
+    headerColor: 'text-amber-800',
+    pillSelected: 'bg-amber-600 text-white border-amber-600',
+    pillHover: 'hover:border-amber-400 hover:text-amber-700',
+    tableHeaderBg: 'bg-amber-50',
+    tableHeaderText: 'text-amber-800',
+    tableBorder: 'border-amber-200',
+    tableRowHover: 'hover:bg-amber-50/50',
+    micFocus: 'focus:border-amber-500 focus:ring-1 focus:ring-amber-500',
+    addBtnBg: 'bg-amber-50',
+    addBtnText: 'text-amber-600',
+    addBtnHover: 'hover:bg-amber-100',
+  }
+
+  const IC_CONFIG = {
+    title: 'Infectious complication',
+    label: 'Infectious complication',
+    borderDashed: 'border-orange-300',
+    titleColor: 'text-orange-700',
+    cardBorder: 'border-orange-200',
+    headerColor: 'text-orange-800',
+    pillSelected: 'bg-orange-600 text-white border-orange-600',
+    pillHover: 'hover:border-orange-400 hover:text-orange-700',
+    tableHeaderBg: 'bg-orange-50',
+    tableHeaderText: 'text-orange-800',
+    tableBorder: 'border-orange-200',
+    tableRowHover: 'hover:bg-orange-50/50',
+    micFocus: 'focus:border-orange-500 focus:ring-1 focus:ring-orange-500',
+    addBtnBg: 'bg-orange-50',
+    addBtnText: 'text-orange-600',
+    addBtnHover: 'hover:bg-orange-100',
   }
 
   return (
@@ -523,121 +815,40 @@ const PatientDetail = () => {
             </div>
 
             {/* BSI Causative pathogen sub-group */}
-            <div className="mt-6 border-2 border-dashed border-amber-300 rounded-lg p-4">
-              <h3 className="text-base font-semibold text-amber-700 mb-4">BSI Causative pathogen</h3>
+            {renderPathogenGroup(
+              bsiPathogens,
+              BSI_CONFIG,
+              {
+                updatePathogenId: updateBsiPathogenId,
+                updateSiteOfIsolation: updateBsiSiteOfIsolation,
+                toggleResistanceProfile: toggleBsiResistanceProfile,
+                updateAstValue: updateBsiAstValue,
+                updateAstAntibioticId: updateBsiAstAntibioticId,
+                addAstResult: addBsiAstResult,
+                removeAstResult: removeBsiAstResult,
+                remove: removeBsiPathogen,
+                add: addBsiPathogen,
+              },
+              'bsi',
+            )}
 
-              {bsiPathogens.map((bp, bsiIndex) => (
-                <div key={bsiIndex} className={`border border-amber-200 rounded-lg p-4 bg-white ${bsiIndex > 0 ? 'mt-4' : ''}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-amber-800">{ordinal(bsiIndex + 1)} BSI pathogen</h4>
-                    <button
-                      type="button"
-                      onClick={() => removeBsiPathogen(bsiIndex)}
-                      className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-sm"
-                      title="Remove pathogen"
-                    >
-                      <i className="fa-solid fa-trash mr-1"></i>
-                      Remove
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select
-                      label="Pathogen"
-                      name={`bsiPathogen_${bsiIndex}`}
-                      value={bp.bsiPathogenId}
-                      options={bsiPathogenSelectOptions}
-                      onChange={(e) => updateBsiPathogenId(bsiIndex, e.target.value)}
-                    />
-                    <Select
-                      label="Site of isolation"
-                      name={`bsiSiteOfIsolation_${bsiIndex}`}
-                      value={bp.siteOfIsolationId}
-                      options={siteSelectOptions}
-                      onChange={(e) => updateBsiSiteOfIsolation(bsiIndex, e.target.value)}
-                    />
-                  </div>
-
-                  {/* Resistance profiles */}
-                  <div className="mt-4">
-                    <label className="form-label">Resistance profiles</label>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {resistanceProfilesOptions.map((rp) => (
-                        <button
-                          key={rp.id}
-                          type="button"
-                          onClick={() => toggleResistanceProfile(bsiIndex, rp.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                            bp.resistanceProfileIds.includes(rp.id)
-                              ? 'bg-amber-600 text-white border-amber-600'
-                              : 'bg-white text-gray-600 border-gray-300 hover:border-amber-400 hover:text-amber-700'
-                          }`}
-                        >
-                          {rp.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* AST / MIC grid */}
-                  <div className="mt-4">
-                    <label className="form-label">AST / MIC results</label>
-                    <div className="mt-1 overflow-x-auto">
-                      <table className="w-full text-sm border-collapse">
-                        <thead>
-                          <tr className="bg-amber-50">
-                            <th className="text-left px-3 py-2 font-medium text-amber-800 border border-amber-200">Antibiotic</th>
-                            <th className="text-left px-3 py-2 font-medium text-amber-800 border border-amber-200 w-64">AST</th>
-                            <th className="text-left px-3 py-2 font-medium text-amber-800 border border-amber-200 w-32">MIC</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {bp.astResults.map((ar) => {
-                            const antibiotic = astAntibioticsOptions.find((a) => a.id === ar.astAntibioticId)
-                            return (
-                              <tr key={ar.astAntibioticId} className="hover:bg-amber-50/50">
-                                <td className="px-3 py-1.5 border border-amber-200 text-gray-700 font-medium">
-                                  {antibiotic?.name || `ID ${ar.astAntibioticId}`}
-                                </td>
-                                <td className="px-1 py-1 border border-amber-200">
-                                  <Select
-                                    name={`ast_${bsiIndex}_${ar.astAntibioticId}`}
-                                    value={ar.astValue}
-                                    options={AST_VALUE_OPTIONS}
-                                    onChange={(e) => updateAstValue(bsiIndex, ar.astAntibioticId, 'astValue', e.target.value)}
-                                  />
-                                </td>
-                                <td className="px-1 py-1 border border-amber-200">
-                                  <div className="flex items-center gap-1">
-                                    <input
-                                      type="text"
-                                      value={ar.micValue}
-                                      onChange={(e) => updateAstValue(bsiIndex, ar.astAntibioticId, 'micValue', e.target.value)}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-                                      placeholder="MIC"
-                                    />
-                                    <span className="text-xs text-gray-500 whitespace-nowrap">μg/mL</span>
-                                  </div>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={addBsiPathogen}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-amber-50 text-amber-600 hover:bg-amber-100 w-auto ${bsiPathogens.length > 0 ? 'mt-4' : ''}`}
-              >
-                <i className="fa-solid fa-plus"></i>
-                Add BSI pathogen
-              </button>
-            </div>
+            {/* Infectious complication sub-group */}
+            {renderPathogenGroup(
+              infectiousComplications,
+              IC_CONFIG,
+              {
+                updatePathogenId: updateIcPathogenId,
+                updateSiteOfIsolation: updateIcSiteOfIsolation,
+                toggleResistanceProfile: toggleIcResistanceProfile,
+                updateAstValue: updateIcAstValue,
+                updateAstAntibioticId: updateIcAstAntibioticId,
+                addAstResult: addIcAstResult,
+                removeAstResult: removeIcAstResult,
+                remove: removeIcPathogen,
+                add: addIcPathogen,
+              },
+              'ic',
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               <Controller
