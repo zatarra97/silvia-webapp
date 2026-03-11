@@ -260,8 +260,8 @@ const PatientDetail = () => {
       } else {
         await createItem(ENTITIES.PATIENTS, payload)
         toast.success('Paziente creato con successo')
+        navigate('/admin/patients')
       }
-      navigate('/admin/patients')
     } catch (e) {
       toast.error('Errore durante il salvataggio')
       console.error(e)
