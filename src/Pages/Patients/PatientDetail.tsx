@@ -650,13 +650,16 @@ const PatientDetail = () => {
                                   />
                                 </td>
                                 <td className="px-1 py-1 border border-amber-200">
-                                  <input
-                                    type="text"
-                                    value={ar.micValue}
-                                    onChange={(e) => updateAstValue(bsiIndex, ar.astAntibioticId, 'micValue', e.target.value)}
-                                    className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-                                    placeholder="MIC"
-                                  />
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="text"
+                                      value={ar.micValue}
+                                      onChange={(e) => updateAstValue(bsiIndex, ar.astAntibioticId, 'micValue', e.target.value)}
+                                      className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                                      placeholder="MIC"
+                                    />
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">μg/mL</span>
+                                  </div>
                                 </td>
                               </tr>
                             )

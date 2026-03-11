@@ -12,13 +12,8 @@ import { ENTITIES } from '../../constants'
 import { exportPatientsToExcel } from '../../services/excel-export'
 
 const SEX_OPTIONS = [
-  { value: '0', label: 'Femmina' },
-  { value: '1', label: 'Maschio' },
-]
-
-const BSI_ONSET_OPTIONS = [
-  { value: '0', label: 'Community-acquired' },
-  { value: '1', label: 'Hospital-acquired' },
+  { value: '0', label: 'Female' },
+  { value: '1', label: 'Male' },
 ]
 
 const PatientList = () => {
@@ -29,31 +24,12 @@ const PatientList = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(50)
   const [filters, setFilters] = useState<Record<string, string>>({})
-  const [wards, setWards] = useState<any[]>([])
-  const [sites, setSites] = useState<any[]>([])
   const [exporting, setExporting] = useState(false)
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; item: any | null; isLoading: boolean }>({
     isOpen: false,
     item: null,
     isLoading: false,
   })
-
-  // Fetch wards and sites for name resolution
-  useEffect(() => {
-    const fetchLookups = async () => {
-      try {
-        const [wardData, siteData] = await Promise.all([
-          getList(ENTITIES.WARDS_OF_ADMISSION, {}, { limit: 1000 }, 'id ASC'),
-          getList(ENTITIES.SITES_OF_ISOLATION, {}, { limit: 1000 }, 'id ASC'),
-        ])
-        setWards(wardData)
-        setSites(siteData)
-      } catch (e) {
-        console.error(e)
-      }
-    }
-    fetchLookups()
-  }, [])
 
   const handleExportExcel = async () => {
     setExporting(true)
@@ -75,10 +51,10 @@ const PatientList = () => {
         resistanceProfiles: rpData,
         astAntibiotics: astData,
       })
-      toast.success('Export completato')
+      toast.success('Export completed')
     } catch (e) {
       console.error(e)
-      toast.error('Errore durante l\'export')
+      toast.error('Error during export')
     } finally {
       setExporting(false)
     }
@@ -129,29 +105,13 @@ const PatientList = () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }))
     try {
       await deleteItem(ENTITIES.PATIENTS, deleteModal.item.id)
-      toast.success('Paziente eliminato con successo')
+      toast.success('Patient deleted successfully')
       setDeleteModal({ isOpen: false, item: null, isLoading: false })
       fetchData()
     } catch (e) {
-      toast.error('Errore durante l\'eliminazione')
+      toast.error('Error during deletion')
       setDeleteModal((prev) => ({ ...prev, isLoading: false }))
     }
-  }
-
-  const getWardName = (wardId: number | string | null) => {
-    if (!wardId) return '-'
-    const ward = wards.find((w) => String(w.id) === String(wardId))
-    return ward ? ward.name : '-'
-  }
-
-  const getSiteNames = (isolationSites: any[] | undefined) => {
-    if (!isolationSites || isolationSites.length === 0) return '-'
-    return isolationSites
-      .map((is: any) => {
-        const site = sites.find((s) => String(s.id) === String(is.siteOfIsolationId))
-        return site ? site.name : '?'
-      })
-      .join(', ')
   }
 
   const formatDate = (dateStr: string | null) => {
@@ -159,57 +119,32 @@ const PatientList = () => {
     return moment(dateStr).format('DD/MM/YYYY')
   }
 
-  const wardFilterOptions = wards.map((w) => ({ value: String(w.id), label: w.name }))
-
   const filterConfig = [
-    { label: 'Nome', name: 'name', type: 'text' as const, options: [] },
-    { label: 'Reparto', name: 'wardOfAdmissionId', type: 'select' as const, options: wardFilterOptions },
-    { label: 'Sesso', name: 'sex', type: 'select' as const, options: SEX_OPTIONS },
-    { label: 'BSI Onset', name: 'bsiOnset', type: 'select' as const, options: BSI_ONSET_OPTIONS },
+    { label: 'Name', name: 'name', type: 'text' as const, options: [] },
+    { label: 'Sex', name: 'sex', type: 'select' as const, options: SEX_OPTIONS },
   ]
 
   const columns = [
-    { key: 'name', header: 'Nome' },
-    { key: 'internalId', header: 'ID Interno' },
+    { key: 'name', header: 'Name' },
+    { key: 'internalId', header: 'Internal ID' },
     {
       key: 'dateOfBirth',
-      header: 'Data di Nascita',
+      header: 'Date of Birth',
       render: (value: string) => formatDate(value),
     },
     {
       key: 'sex',
-      header: 'Sesso',
+      header: 'Sex',
       render: (value: number | null) => {
-        if (value === 0) return 'Femmina'
-        if (value === 1) return 'Maschio'
-        return '-'
-      },
-    },
-    {
-      key: 'wardOfAdmissionId',
-      header: 'Reparto',
-      render: (value: number) => getWardName(value),
-    },
-    {
-      key: 'bsiOnset',
-      header: 'BSI Onset',
-      render: (value: number | null) => {
-        if (value === 0) return 'Community-acquired'
-        if (value === 1) return 'Hospital-acquired'
+        if (value === 0) return 'Female'
+        if (value === 1) return 'Male'
         return '-'
       },
     },
     {
       key: 'bsiDiagnosisDate',
-      header: 'Data Diagnosi BSI',
+      header: 'BSI Diagnosis Date',
       render: (value: string) => formatDate(value),
-    },
-    { key: 'sofaScore', header: 'SOFA Score' },
-    { key: 'charlsonComorbidityIndex', header: 'Charlson Index' },
-    {
-      key: 'isolationSites',
-      header: 'Siti di Isolamento',
-      render: (_value: any, item: any) => getSiteNames(item.isolationSites),
     },
   ]
 
@@ -217,12 +152,12 @@ const PatientList = () => {
     {
       icon: 'fa-pen',
       method: (item: any) => navigate(`/admin/patients/${item.id}`),
-      tooltip: 'Modifica',
+      tooltip: 'Edit',
     },
     {
       icon: 'fa-trash',
       method: (item: any) => setDeleteModal({ isOpen: true, item, isLoading: false }),
-      tooltip: 'Elimina',
+      tooltip: 'Delete',
     },
   ]
 
@@ -232,8 +167,8 @@ const PatientList = () => {
     <div>
       <PageHeader
         icon="fa-solid fa-hospital-user"
-        title="Pazienti"
-        subtitle={`${totalCount} pazienti totali`}
+        title="Patients"
+        subtitle={`${totalCount} total patients`}
         buttons={[
           {
             label: 'Export Excel',
@@ -244,7 +179,7 @@ const PatientList = () => {
             loading: exporting,
           },
           {
-            label: 'Nuovo Paziente',
+            label: 'New Patient',
             icon: 'fa-solid fa-plus',
             onClick: () => navigate('/admin/patients/new'),
             variant: 'primary',
@@ -276,8 +211,8 @@ const PatientList = () => {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, item: null, isLoading: false })}
         onConfirm={handleDelete}
-        title="Elimina paziente"
-        description={`Sei sicuro di voler eliminare il paziente "${deleteModal.item?.name || ''}"? Questa azione è irreversibile.`}
+        title="Delete patient"
+        description={`Are you sure you want to delete the patient "${deleteModal.item?.name || ''}"? This action is irreversible.`}
         isLoading={deleteModal.isLoading}
       />
     </div>
