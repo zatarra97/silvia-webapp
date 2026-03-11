@@ -32,7 +32,7 @@ const FormModal = ({ isOpen, item, onClose, onSave, saving }: FormModalProps) =>
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setError('Il nome è obbligatorio')
+      setError('Name is required')
       return
     }
     await onSave(name.trim())
@@ -47,7 +47,7 @@ const FormModal = ({ isOpen, item, onClose, onSave, saving }: FormModalProps) =>
             <div className="absolute right-3 top-3">
               <button
                 type="button"
-                aria-label="Chiudi"
+                aria-label="Close"
                 className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 focus:outline-none cursor-pointer"
                 onClick={onClose}
               >
@@ -61,15 +61,15 @@ const FormModal = ({ isOpen, item, onClose, onSave, saving }: FormModalProps) =>
                 </div>
                 <div>
                   <h3 className="text-xl font-bold leading-7 text-gray-900">
-                    {item ? 'Modifica Reparto' : 'Nuovo Reparto'}
+                    {item ? 'Edit Ward' : 'New Ward'}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {item ? 'Modifica il nome del reparto' : 'Inserisci il nome del nuovo reparto'}
+                    {item ? 'Edit the ward name' : 'Enter the new ward name'}
                   </p>
                 </div>
               </div>
               <Input
-                label="Nome *"
+                label="Name *"
                 type="text"
                 name="wardName"
                 value={name}
@@ -86,7 +86,7 @@ const FormModal = ({ isOpen, item, onClose, onSave, saving }: FormModalProps) =>
                   onClick={onClose}
                   disabled={saving}
                 >
-                  Annulla
+                  Cancel
                 </button>
                 <button
                   type="button"
@@ -99,12 +99,12 @@ const FormModal = ({ isOpen, item, onClose, onSave, saving }: FormModalProps) =>
                   {saving ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin mr-2"></i>
-                      Salvataggio...
+                      Saving...
                     </>
                   ) : (
                     <>
                       <i className="fa-solid fa-floppy-disk mr-2"></i>
-                      Salva
+                      Save
                     </>
                   )}
                 </button>
@@ -156,15 +156,15 @@ const WardList = () => {
     try {
       if (formModal.item) {
         await updateItem(ENTITIES.WARDS_OF_ADMISSION, formModal.item.id, { name })
-        toast.success('Reparto aggiornato con successo')
+        toast.success('Ward updated successfully')
       } else {
         await createItem(ENTITIES.WARDS_OF_ADMISSION, { name })
-        toast.success('Reparto creato con successo')
+        toast.success('Ward created successfully')
       }
       setFormModal({ isOpen: false, item: null })
       fetchData()
     } catch (e) {
-      toast.error('Errore durante il salvataggio')
+      toast.error('Error while saving')
     } finally {
       setSaving(false)
     }
@@ -175,21 +175,21 @@ const WardList = () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }))
     try {
       await deleteItem(ENTITIES.WARDS_OF_ADMISSION, deleteModal.item.id)
-      toast.success('Reparto eliminato con successo')
+      toast.success('Ward deleted successfully')
       setDeleteModal({ isOpen: false, item: null, isLoading: false })
       fetchData()
     } catch (e) {
-      toast.error('Errore durante l\'eliminazione')
+      toast.error('Error while deleting')
       setDeleteModal((prev) => ({ ...prev, isLoading: false }))
     }
   }
 
   const columns = [
     { key: 'id', header: 'ID' },
-    { key: 'name', header: 'Nome' },
+    { key: 'name', header: 'Name' },
     {
       key: 'createdAt',
-      header: 'Data Creazione',
+      header: 'Created at',
       render: (value: string) => (value ? moment(value).format('DD/MM/YYYY HH:mm') : '-'),
     },
   ]
@@ -198,12 +198,12 @@ const WardList = () => {
     {
       icon: 'fa-pen',
       method: (item: any) => setFormModal({ isOpen: true, item }),
-      tooltip: 'Modifica',
+      tooltip: 'Edit',
     },
     {
       icon: 'fa-trash',
       method: (item: any) => setDeleteModal({ isOpen: true, item, isLoading: false }),
-      tooltip: 'Elimina',
+      tooltip: 'Delete',
     },
   ]
 
@@ -213,11 +213,11 @@ const WardList = () => {
     <div>
       <PageHeader
         icon="fa-solid fa-bed"
-        title="Reparti"
-        subtitle={`${totalCount} reparti totali`}
+        title="Wards of admission"
+        subtitle={`${totalCount} total wards`}
         buttons={[
           {
-            label: 'Nuovo Reparto',
+            label: 'New Ward',
             icon: 'fa-solid fa-plus',
             onClick: () => setFormModal({ isOpen: true, item: null }),
             variant: 'primary',
@@ -250,8 +250,8 @@ const WardList = () => {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, item: null, isLoading: false })}
         onConfirm={handleDelete}
-        title="Elimina reparto"
-        description={`Sei sicuro di voler eliminare il reparto "${deleteModal.item?.name || ''}"? Questa azione è irreversibile.`}
+        title="Delete ward"
+        description={`Are you sure you want to delete the ward "${deleteModal.item?.name || ''}"? This action is irreversible.`}
         isLoading={deleteModal.isLoading}
       />
     </div>

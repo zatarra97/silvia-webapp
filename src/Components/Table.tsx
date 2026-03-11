@@ -8,9 +8,9 @@ interface Column {
 	type?: "image" | "text" | "note"
 	width?: string
 	render?: (value: any, item?: any) => React.ReactNode
-	// Opzioni personalizzazione per tipo 'note'
-	noteIcon?: string // es: 'fa-solid fa-circle-exclamation'
-	noteColorClass?: string // es: 'text-amber-700 hover:text-amber-900'
+	// Customization options for 'note' type
+	noteIcon?: string
+	noteColorClass?: string
 }
 
 interface Action {
@@ -88,7 +88,7 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 							<tr>
 								{actions && (
 									<th scope="col" className="px-6 py-5 font-semibold tracking-wide border-r border-gray-200">
-										Azioni
+										Actions
 									</th>
 								)}
 								{columns.map((column, index) => (
@@ -109,8 +109,8 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 								<td colSpan={actions ? columns.length + 1 : columns.length} className="px-6 py-12 text-center">
 									<div className="flex flex-col items-center justify-center text-gray-500">
 										<i className="fa-solid fa-inbox text-4xl mb-3 text-gray-300"></i>
-										<p className="text-lg font-medium text-gray-600">Nessun dato trovato</p>
-										<p className="text-sm text-gray-400 mt-1">Inserisci un nuovo dato o prova a modificare i filtri di ricerca</p>
+										<p className="text-lg font-medium text-gray-600">No data found</p>
+										<p className="text-sm text-gray-400 mt-1">Add a new entry or try adjusting the search filters</p>
 									</div>
 								</td>
 							</tr>
@@ -123,14 +123,14 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 
 	return (
 		<div className="relative overflow-hidden bg-white rounded-2xl shadow-lg border border-gray-100">
-			{/* Versione desktop */}
+			{/* Desktop version */}
 			<div className="overflow-x-auto overflow-y-hidden hidden md:block">
 				<table className="w-full text-sm text-left rtl:text-right text-gray-600">
 					<thead className="text-xs text-gray-600 uppercase bg-gradient-to-r from-slate-200 to-slate-300">
 						<tr>
 							{actions && (
 								<th scope="col" className="px-6 py-5 font-semibold tracking-wide border-r border-gray-200">
-									Azioni
+									Actions
 								</th>
 							)}
 							{columns.map((column, index) => (
@@ -228,7 +228,7 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 															<div className="whitespace-pre-wrap wrap-break-words leading-relaxed">
 																{String(value)}
 															</div>
-															{/* Freccia */}
+															{/* Arrow */}
 															<div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
 																<div className="w-3 h-3 bg-linear-to-br from-gray-900 to-gray-800 border-r border-b border-gray-700 transform rotate-45"></div>
 															</div>
@@ -261,7 +261,7 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 				</table>
 			</div>
 
-			{/* Versione mobile - con tabella che si restringe e azioni sempre visibili */}
+			{/* Mobile version - table shrinks and actions always visible */}
 			<div className="block md:hidden">
 				<div className="overflow-x-auto overflow-y-hidden">
 					<table className="w-full text-sm text-left rtl:text-right text-gray-600">
@@ -377,7 +377,7 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 																	<div className="whitespace-pre-wrap break-words leading-relaxed">
 																		{String(value)}
 																	</div>
-																	{/* Freccia */}
+																	{/* Arrow */}
 																	<div className="absolute bottom-full left-1/2 transform -translate-x-1/2 -mb-1">
 																		<div className="w-3 h-3 bg-gradient-to-br from-gray-900 to-gray-800 border-l border-t border-gray-700 transform rotate-45"></div>
 																	</div>

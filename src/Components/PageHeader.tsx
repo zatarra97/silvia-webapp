@@ -78,7 +78,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ icon, title, subtitle, buttons 
                   transition-colors duration-200`}
 							>
 								{button.icon && <i className={`${button.icon} mr-2`}></i>}
-								{button.loading ? "Caricamento..." : button.label}
+								{button.loading ? "Loading..." : button.label}
 							</button>
 						))}
 					</div>

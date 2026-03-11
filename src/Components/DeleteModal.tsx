@@ -20,7 +20,7 @@ const DeleteModal = ({ isOpen, onClose, onConfirm, title, description, isLoading
             <div className="absolute right-3 top-3">
               <button
                 type="button"
-                aria-label="Chiudi"
+                aria-label="Close"
                 className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-200 cursor-pointer"
                 onClick={onClose}
               >
@@ -44,7 +44,7 @@ const DeleteModal = ({ isOpen, onClose, onConfirm, title, description, isLoading
                   onClick={onClose}
                   disabled={isLoading}
                 >
-                  Annulla
+                  Cancel
                 </button>
                 <button 
                   type="button" 
@@ -57,10 +57,10 @@ const DeleteModal = ({ isOpen, onClose, onConfirm, title, description, isLoading
                   {isLoading ? (
                     <>
                       <i className="fa-solid fa-spinner fa-spin mr-2"></i>
-                      Eliminazione in corso
+                      Deleting...
                     </>
                   ) : (
-                    confirmText || 'Elimina'
+                    confirmText || 'Delete'
                   )}
                 </button>
               </div>

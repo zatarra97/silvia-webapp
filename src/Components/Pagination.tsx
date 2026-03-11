@@ -34,7 +34,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
   return (
     <div className="container flex flex-col sm:flex-row justify-between items-center mx-auto mt-4 p-4 bg-white rounded-xl">
       <div className="flex items-center space-x-4 mb-4 sm:mb-0">
-        <span className="text-sm text-gray-700">Elementi per pagina:</span>
+        <span className="text-sm text-gray-700">Items per page:</span>
         <select
           value={itemsPerPage}
           onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
@@ -51,17 +51,17 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, onIte
           disabled={currentPage === 1}
           className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-300 text-gray-500' : 'bg-blue-500 text-white'}`}
         >
-          Precedente
+          Previous
         </button>
         <span className="text-sm">
-          Pagina {currentPage} di {totalPages}
+          Page {currentPage} of {totalPages}
         </span>
         <button
           onClick={handleNext}
           disabled={currentPage === totalPages}
           className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-300 text-gray-500' : 'bg-blue-500 text-white'}`}
         >
-          Successiva
+          Next
         </button>
       </div>
       <div className="block md:hidden items-center space-x-4">

@@ -8,7 +8,7 @@ interface FiltersProps {
 	filters: Filter[]
 	onFilterChange: (name: string, value: string) => void
 	entity: string
-	/** Valori correnti dei filtri (es. dallo stato del genitore). Se forniti, vengono usati per visualizzare la selezione. */
+	/** Current filter values (from parent state). If provided, used for display. */
 	values?: Record<string, string>
 }
 
@@ -30,47 +30,47 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 	const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 	const [showFilters, setShowFilters] = useState(false)
 
-	// Carica i filtri dal localStorage quando il componente viene montato
+	// Load filters from localStorage when component mounts
 	useEffect(() => {
 		const savedFilters = localStorage.getItem(`filters_${entity}`)
 		if (savedFilters) {
 			const parsedFilters = JSON.parse(savedFilters)
 			setFilterValues(parsedFilters)
-			// Applica i filtri salvati solo al mount iniziale
+			// Apply saved filters only on initial mount
 			if (Object.keys(filterValues).length === 0) {
 				Object.entries(parsedFilters).forEach(([name, value]) => {
 					onFilterChange(name, value as string)
 				})
 			}
 		}
-	}, [entity]) // Rimosso onFilterChange dalle dipendenze
+	}, [entity]) // Removed onFilterChange from dependencies
 
-	// Gestisce il cambio dei filtri e li salva nel localStorage
+	// Handle filter changes and save to localStorage
 	const handleFilterChange = (name: string, value: string) => {
-		// Aggiorna lo stato locale
+		// Update local state
 		setFilterValues((prev) => ({
 			...prev,
 			[name]: value,
 		}))
 
-		// Recupera i filtri esistenti
+		// Retrieve existing filters
 		const existingFilters = localStorage.getItem(`filters_${entity}`)
 		const currentFilters = existingFilters ? JSON.parse(existingFilters) : {}
 
-		// Aggiorna i filtri
+		// Update filters
 		const updatedFilters = {
 			...currentFilters,
 			[name]: value,
 		}
 
-		// Salva i nuovi filtri
+		// Save updated filters
 		localStorage.setItem(`filters_${entity}`, JSON.stringify(updatedFilters))
 
-		// Chiama la callback originale
+		// Call the original callback
 		onFilterChange(name, value)
 	}
 
-	// Pulisce i filtri quando si cambia entità
+	// Clear filters when changing entity
 	useEffect(() => {
 		const currentPath = location.pathname.split("/")[1]
 		const allStorageKeys = Object.keys(localStorage)
@@ -82,17 +82,17 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 		})
 	}, [location])
 
-	// Valore effettivo da mostrare: preferisce i valori dal genitore se forniti
+	// Display value: prefers values from parent if provided
 	const getDisplayValue = (name: string) => valuesFromParent?.[name] ?? filterValues[name] ?? ""
 
-	// Calcola il numero di filtri attivi (esclude operatori senza valore, es. "gte:")
+	// Count active filters (exclude operators without values, e.g. "gte:")
 	const activeFiltersCount = Object.values(valuesFromParent ?? filterValues).filter((value) => {
 		if (!value) return false
-		// Non contare valori del tipo "op:" (operatore senza valore)
+		// Don't count values like "op:" (operator without value)
 		return !/^[a-z]+:$/.test(value)
 	}).length
 
-	// Alterna la visualizzazione dei filtri
+	// Toggle filters visibility
 	const toggleFilters = () => {
 		setShowFilters(!showFilters)
 	}
@@ -101,7 +101,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 
 	return (
 		<div className="mb-6">
-			{/* Pulsante per mostrare/nascondere i filtri su mobile */}
+			{/* Button to show/hide filters on mobile */}
 			<div className="md:hidden mb-4">
 				<button
 					onClick={toggleFilters}
@@ -111,7 +111,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 						<div className="bg-gradient-to-r from-blue-500 to-blue-600 w-8 h-8 rounded-lg mr-3 shadow-sm flex items-center justify-center">
 							<i className="fa-solid fa-filter text-white text-sm"></i>
 						</div>
-						<span className="font-semibold text-gray-700">Filtri</span>
+						<span className="font-semibold text-gray-700">Filters</span>
 						{activeFiltersCount > 0 && (
 							<span className="ml-3 px-2.5 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded-full font-bold shadow-sm">
 								{activeFiltersCount}
@@ -124,7 +124,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 				</button>
 			</div>
 
-			{/* Contenitore dei filtri - sempre visibile su desktop, condizionale su mobile */}
+			{/* Filter container - always visible on desktop, conditional on mobile */}
 			<div
 				className={`${
 					showFilters ? "block" : "hidden"
@@ -135,17 +135,17 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 						<div key={filter.name} className={`${filterClass} px-2 mb-3`}>
 							{filter.type === "text" && (
 								<Input
-									label={filter.label || "Campo"}
+									label={filter.label || "Field"}
 									type="text"
 									name={filter.name}
 									value={getDisplayValue(filter.name)}
-									placeholder={`Cerca per ${filter.label?.toLowerCase() || "campo"}...`}
+									placeholder={`Search by ${filter.label?.toLowerCase() || "field"}...`}
 									onChange={(e) => handleFilterChange(filter.name, e.target.value || "")}
 								/>
 							)}
 							{filter.type === "select" && (
 								<Select
-									label={filter.label || "Campo"}
+									label={filter.label || "Field"}
 									name={filter.name}
 									value={getDisplayValue(filter.name)}
 									options={filter.options}
@@ -155,7 +155,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 							)}
 							{filter.type === "boolean" && (
 								<Select
-									label={filter.label || "Campo"}
+									label={filter.label || "Field"}
 									name={filter.name}
 									value={getDisplayValue(filter.name)}
 									options={filter.options}
@@ -164,7 +164,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 							)}
 							{filter.type === "numberOperator" && (
 								<div>
-									<label className="block text-sm font-bold text-gray-700 mb-1">{filter.label || "Campo"}</label>
+									<label className="block text-sm font-bold text-gray-700 mb-1">{filter.label || "Field"}</label>
 									{(() => {
 										const raw = getDisplayValue(filter.name) || ""
 										const hasColon = raw.includes(":")
@@ -177,7 +177,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 										const setValue = (op: string, v1?: string) => {
 											let payload = ""
 											const a = (v1 || "").trim()
-											// Salva sempre l'operatore; se il valore è vuoto resta "op:"
+											// Always save operator; if value is empty it stays "op:"
 											payload = `${op}:${a}`
 											handleFilterChange(filter.name, payload)
 										}
@@ -209,7 +209,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 														type="number"
 														name={`${filter.name}_value`}
 														inputMode="decimal"
-														placeholder="valore"
+														placeholder="value"
 														value={firstVal}
 														onChange={(e) => setValue(currentOp, (e.target as HTMLInputElement).value)}
 													/>
@@ -221,7 +221,7 @@ const Filters = ({ filters, onFilterChange, entity, values: valuesFromParent }: 
 							)}
 							{filter.type === "dateOperator" && (
 								<div>
-									<label className="block text-sm font-bold text-gray-700 mb-1">{filter.label || "Campo"}</label>
+									<label className="block text-sm font-bold text-gray-700 mb-1">{filter.label || "Field"}</label>
 									{(() => {
 										const raw = getDisplayValue(filter.name) || ""
 										const hasColon = raw.includes(":")
