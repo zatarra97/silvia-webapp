@@ -185,13 +185,14 @@ const PatientDetail = () => {
               resistanceProfileIds: bp.resistanceProfiles
                 ? bp.resistanceProfiles.map((rp: any) => rp.resistanceProfileId)
                 : [],
-              astResults: bp.astResults
-                ? bp.astResults.map((ar: any) => ({
-                    astAntibioticId: ar.astAntibioticId,
-                    astValue: ar.astValue ?? null,
-                    micValue: ar.micValue || '',
-                  }))
-                : [],
+              astResults: astData.map((ab: any) => {
+                const existing = bp.astResults?.find((ar: any) => ar.astAntibioticId === ab.id)
+                return {
+                  astAntibioticId: ab.id,
+                  astValue: existing?.astValue ?? null,
+                  micValue: existing?.micValue || '',
+                }
+              }),
             }))
           )
         }
