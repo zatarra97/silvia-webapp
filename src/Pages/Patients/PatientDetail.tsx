@@ -134,7 +134,7 @@ const PatientDetail = () => {
   }, [])
 
   useEffect(() => {
-    if (!isEdit) return
+    if (!isEdit || astAntibioticsOptions.length === 0) return
     const fetchPatient = async () => {
       setLoading(true)
       try {
@@ -185,7 +185,7 @@ const PatientDetail = () => {
               resistanceProfileIds: bp.resistanceProfiles
                 ? bp.resistanceProfiles.map((rp: any) => rp.resistanceProfileId)
                 : [],
-              astResults: astData.map((ab: any) => {
+              astResults: astAntibioticsOptions.map((ab: any) => {
                 const existing = bp.astResults?.find((ar: any) => ar.astAntibioticId === ab.id)
                 return {
                   astAntibioticId: ab.id,
@@ -204,7 +204,7 @@ const PatientDetail = () => {
       }
     }
     fetchPatient()
-  }, [id, isEdit, reset])
+  }, [id, isEdit, reset, astAntibioticsOptions])
 
   const toNum = (v: any) => (v !== null && v !== '' && v !== undefined ? Number(v) : null)
 
