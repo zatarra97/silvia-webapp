@@ -52,6 +52,7 @@ const AST_VALUE_OPTIONS = [
 
 interface BsiPathogenEntry {
   bsiPathogenId: number | string | null
+  siteOfIsolationId: number | string | null
   resistanceProfileIds: number[]
   astResults: { astAntibioticId: number; astValue: number | string | null; micValue: string }[]
 }
@@ -75,7 +76,6 @@ const PatientDetail = () => {
   const [bsiPathogensOptions, setBsiPathogensOptions] = useState<any[]>([])
   const [resistanceProfilesOptions, setResistanceProfilesOptions] = useState<any[]>([])
   const [astAntibioticsOptions, setAstAntibioticsOptions] = useState<any[]>([])
-  const [isolationSites, setIsolationSites] = useState<{ siteOfIsolationId: string | number | null }[]>([])
   const [empiricalTherapies, setEmpiricalTherapies] = useState<{ antimicrobialTherapyId: string | number | null }[]>([])
   const [targetedTherapies, setTargetedTherapies] = useState<{ antimicrobialTherapyId: string | number | null }[]>([])
   const [bsiPathogens, setBsiPathogens] = useState<BsiPathogenEntry[]>([])
@@ -157,13 +157,6 @@ const PatientDetail = () => {
           timeToAppropriateTherapy: data.timeToAppropriateTherapy ?? null,
           outcome: data.outcome ?? null,
         })
-        if (data.isolationSites && data.isolationSites.length > 0) {
-          setIsolationSites(
-            data.isolationSites.map((is: any) => ({
-              siteOfIsolationId: is.siteOfIsolationId ?? null,
-            }))
-          )
-        }
         if (data.empiricalTherapies && data.empiricalTherapies.length > 0) {
           setEmpiricalTherapies(
             data.empiricalTherapies.map((t: any) => ({
@@ -180,8 +173,9 @@ const PatientDetail = () => {
         }
         if (data.bsiPathogens && data.bsiPathogens.length > 0) {
           setBsiPathogens(
-            data.bsiPathogens.map((bp: any) => ({
+            data.bsiPathogens.map((bp: any, idx: number) => ({
               bsiPathogenId: bp.bsiPathogenId ?? null,
+              siteOfIsolationId: data.isolationSites?.[idx]?.siteOfIsolationId ?? null,
               resistanceProfileIds: bp.resistanceProfiles
                 ? bp.resistanceProfiles.map((rp: any) => rp.resistanceProfileId)
                 : [],
@@ -228,9 +222,9 @@ const PatientDetail = () => {
         dateTargetedTherapy: formData.dateTargetedTherapy || null,
         timeToAppropriateTherapy: toNum(formData.timeToAppropriateTherapy),
         outcome: toNum(formData.outcome),
-        isolationSites: isolationSites
-          .filter((is) => is.siteOfIsolationId !== null && is.siteOfIsolationId !== '')
-          .map((is, idx) => ({ siteOfIsolationId: Number(is.siteOfIsolationId), pathogenOrder: idx + 1 })),
+        isolationSites: bsiPathogens
+          .filter((bp) => bp.siteOfIsolationId !== null && bp.siteOfIsolationId !== '')
+          .map((bp, idx) => ({ siteOfIsolationId: Number(bp.siteOfIsolationId), pathogenOrder: idx + 1 })),
         empiricalTherapies: empiricalTherapies
           .filter((t) => t.antimicrobialTherapyId !== null && t.antimicrobialTherapyId !== '')
           .map((t, idx) => ({ antimicrobialTherapyId: Number(t.antimicrobialTherapyId), therapyOrder: idx + 1 })),
@@ -271,19 +265,6 @@ const PatientDetail = () => {
     }
   }
 
-  // Isolation sites helpers
-  const addIsolationSite = () => {
-    setIsolationSites((prev) => [...prev, { siteOfIsolationId: null }])
-  }
-  const removeIsolationSite = (index: number) => {
-    setIsolationSites((prev) => prev.filter((_, i) => i !== index))
-  }
-  const updateIsolationSite = (index: number, value: string | number | null) => {
-    setIsolationSites((prev) =>
-      prev.map((item, i) => (i === index ? { siteOfIsolationId: value } : item))
-    )
-  }
-
   // Empirical therapies helpers
   const addEmpiricalTherapy = () => {
     setEmpiricalTherapies((prev) => [...prev, { antimicrobialTherapyId: null }])
@@ -313,6 +294,7 @@ const PatientDetail = () => {
   // BSI Pathogens helpers
   const createEmptyBsiPathogen = (): BsiPathogenEntry => ({
     bsiPathogenId: null,
+    siteOfIsolationId: null,
     resistanceProfileIds: [],
     astResults: astAntibioticsOptions.map((ab) => ({
       astAntibioticId: ab.id,
@@ -330,6 +312,11 @@ const PatientDetail = () => {
   const updateBsiPathogenId = (index: number, value: string | number | null) => {
     setBsiPathogens((prev) =>
       prev.map((item, i) => (i === index ? { ...item, bsiPathogenId: value } : item))
+    )
+  }
+  const updateBsiSiteOfIsolation = (index: number, value: string | number | null) => {
+    setBsiPathogens((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, siteOfIsolationId: value } : item))
     )
   }
   const toggleResistanceProfile = (bsiIndex: number, rpId: number) => {
@@ -488,42 +475,6 @@ const PatientDetail = () => {
               />
             </div>
 
-            {/* Site of isolation sub-group */}
-            <div className="mt-6 border-2 border-dashed border-cyan-300 rounded-lg p-4">
-              <h3 className="text-base font-semibold text-cyan-700 mb-4">Site of isolation</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {isolationSites.map((site, index) => (
-                  <div key={index} className="flex items-end gap-3">
-                    <div className="flex-1">
-                      <Select
-                        label={`${ordinal(index + 1)} pathogen`}
-                        name={`isolationSite_${index}`}
-                        value={site.siteOfIsolationId}
-                        options={siteSelectOptions}
-                        onChange={(e) => updateIsolationSite(index, e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeIsolationSite(index)}
-                      className="mb-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                      title="Remove site"
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addIsolationSite}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer bg-cyan-50 text-cyan-600 hover:bg-cyan-100 w-auto"
-                >
-                  <i className="fa-solid fa-plus"></i>
-                  Add site
-                </button>
-              </div>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               <Input
                 label="SOFA score"
@@ -590,7 +541,7 @@ const PatientDetail = () => {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Select
                       label="Pathogen"
                       name={`bsiPathogen_${bsiIndex}`}
@@ -598,12 +549,13 @@ const PatientDetail = () => {
                       options={bsiPathogenSelectOptions}
                       onChange={(e) => updateBsiPathogenId(bsiIndex, e.target.value)}
                     />
-                    {isolationSites[bsiIndex]?.siteOfIsolationId && (
-                      <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-800">
-                        <span className="text-xs text-amber-500 font-medium">Site of isolation:</span>{' '}
-                        {sitesOptions.find((s) => String(s.id) === String(isolationSites[bsiIndex].siteOfIsolationId))?.name || '-'}
-                      </div>
-                    )}
+                    <Select
+                      label="Site of isolation"
+                      name={`bsiSiteOfIsolation_${bsiIndex}`}
+                      value={bp.siteOfIsolationId}
+                      options={siteSelectOptions}
+                      onChange={(e) => updateBsiSiteOfIsolation(bsiIndex, e.target.value)}
+                    />
                   </div>
 
                   {/* Resistance profiles */}
