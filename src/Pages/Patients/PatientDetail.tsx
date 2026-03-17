@@ -987,7 +987,7 @@ const PatientDetail = () => {
                 type="number"
                 {...register('timeToAppropriateTherapy')}
                 readOnly
-                className="bg-gray-100 cursor-not-allowed"
+                disabled
                 error={errors.timeToAppropriateTherapy ? { message: errors.timeToAppropriateTherapy.message ?? '' } : undefined}
               />
             </div>
