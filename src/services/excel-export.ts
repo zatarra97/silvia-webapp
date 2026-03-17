@@ -186,7 +186,7 @@ function buildDictFields(lookups: Lookups): DictField[] {
 
     // CLINICAL DATA
     { name: 'Ward of admission', description: 'Hospital ward at admission', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.wards).map(w => ({ id: w.id, label: w.name })) },
-    { name: 'BSI onset', description: 'Mode of infection acquisition', section: 'CLINICAL DATA', type: 'enum', options: [{ id: 0, label: 'Community-acquired' }, { id: 1, label: 'Hospital-acquired' }] },
+    { name: 'BSI onset', description: 'Mode of infection acquisition', section: 'CLINICAL DATA', type: 'enum', options: [{ id: 0, label: 'Community-acquired' }, { id: 1, label: 'Hospital-acquired' }, { id: 2, label: 'Healthcare-associated' }] },
     { name: 'BSI diagnosis date', description: 'Date of first positive blood culture', section: 'CLINICAL DATA', type: 'date' },
     { name: 'Site of isolation', description: '', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
     { name: 'SOFA score', description: '', section: 'CLINICAL DATA', type: 'numeric' },

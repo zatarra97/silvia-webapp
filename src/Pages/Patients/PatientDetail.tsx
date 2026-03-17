@@ -21,6 +21,7 @@ const SEX_OPTIONS = [
 const BSI_ONSET_OPTIONS = [
   { value: 0, label: 'Community-acquired' },
   { value: 1, label: 'Hospital-acquired' },
+  { value: 2, label: 'Healthcare-associated' },
 ]
 
 const RECTAL_COLONIZATION_OPTIONS = [
@@ -92,6 +93,8 @@ const PatientDetail = () => {
     handleSubmit,
     control,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -115,6 +118,19 @@ const PatientDetail = () => {
       outcome: null,
     },
   })
+
+  const watchedBsiDiagnosisDate = watch('bsiDiagnosisDate')
+  const watchedDateTargetedTherapy = watch('dateTargetedTherapy')
+
+  useEffect(() => {
+    if (watchedBsiDiagnosisDate && watchedDateTargetedTherapy) {
+      const start = new Date(watchedBsiDiagnosisDate)
+      const end = new Date(watchedDateTargetedTherapy)
+      const diffMs = end.getTime() - start.getTime()
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      setValue('timeToAppropriateTherapy', diffDays < 0 ? 0 : diffDays)
+    }
+  }, [watchedBsiDiagnosisDate, watchedDateTargetedTherapy, setValue])
 
   useEffect(() => {
     const fetchLookups = async () => {
@@ -970,6 +986,8 @@ const PatientDetail = () => {
                 label="Time to appropriate therapy (days)"
                 type="number"
                 {...register('timeToAppropriateTherapy')}
+                readOnly
+                className="bg-gray-100 cursor-not-allowed"
                 error={errors.timeToAppropriateTherapy ? { message: errors.timeToAppropriateTherapy.message ?? '' } : undefined}
               />
             </div>
