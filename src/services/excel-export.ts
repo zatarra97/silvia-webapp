@@ -41,47 +41,64 @@ function computeDynamicCounts(patients: any[]): DynamicCounts {
   return { maxIsolationSites, maxEmpiricalTherapies, maxTargetedTherapies, maxBsiPathogens, maxResistanceProfiles }
 }
 
-function buildHeaders(counts: DynamicCounts, antibiotics: any[]): string[] {
-  const headers: string[] = []
+interface HeaderEntry {
+  label: string
+  section: 'demographic' | 'clinical' | 'microbiological' | 'therapeutic' | 'outcome'
+}
+
+// Colors matching the form sections: green, cyan, amber, fuchsia, lime
+const SECTION_COLORS: Record<HeaderEntry['section'], { bg: string; font: string }> = {
+  demographic:     { bg: 'FF22C55E', font: 'FFFFFFFF' }, // green
+  clinical:        { bg: 'FF06B6D4', font: 'FFFFFFFF' }, // cyan
+  microbiological: { bg: 'FFF59E0B', font: 'FFFFFFFF' }, // amber
+  therapeutic:     { bg: 'FFD946EF', font: 'FFFFFFFF' }, // fuchsia
+  outcome:         { bg: 'FF84CC16', font: 'FFFFFFFF' }, // lime
+}
+
+function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] {
+  const headers: HeaderEntry[] = []
+  const push = (section: HeaderEntry['section'], ...labels: string[]) => {
+    for (const label of labels) headers.push({ label, section })
+  }
 
   // Demographics
-  headers.push('Name', 'ID', 'Date of Birth', 'Sex')
+  push('demographic', 'Name', 'ID', 'Date of Birth', 'Sex')
 
   // Clinical
-  headers.push('Ward of Admission', 'BSI Onset', 'BSI Diagnosis Date')
+  push('clinical', 'Ward of Admission', 'BSI Onset', 'BSI Diagnosis Date')
   for (let i = 1; i <= counts.maxIsolationSites; i++) {
-    headers.push(`Site of Isolation ${i}`)
+    push('clinical', `Site of Isolation ${i}`)
   }
-  headers.push('Admission Date', 'Discharge Date', 'LOS (days)', 'SOFA Score', 'Charlson Comorbidity Index')
+  push('clinical', 'Admission Date', 'Discharge Date', 'LOS (days)', 'SOFA Score', 'Charlson Comorbidity Index')
 
   // Microbiological
-  headers.push('Rectal Colonization Status', 'Rectal Colonization Pathogen')
+  push('microbiological', 'Rectal Colonization Status', 'Rectal Colonization Pathogen')
 
   // BSI blocks
   for (let b = 1; b <= counts.maxBsiPathogens; b++) {
-    headers.push(`BSI Pathogen ${b}`)
+    push('microbiological', `BSI Pathogen ${b}`)
     for (let r = 1; r <= counts.maxResistanceProfiles; r++) {
-      headers.push(`Resistance Profile ${b}.${r}`)
+      push('microbiological', `Resistance Profile ${b}.${r}`)
     }
     for (const ab of antibiotics) {
-      headers.push(`AST ${ab.name} ${b}`)
-      headers.push(`MIC ${ab.name} ${b}`)
+      push('microbiological', `AST ${ab.name} ${b}`)
+      push('microbiological', `MIC ${ab.name} ${b}`)
     }
   }
 
-  headers.push('Mono/Poli Microbial')
+  push('microbiological', 'Mono/Poli Microbial')
 
   // Therapeutic
   for (let i = 1; i <= counts.maxEmpiricalTherapies; i++) {
-    headers.push(`Empirical Therapy ${i}`)
+    push('therapeutic', `Empirical Therapy ${i}`)
   }
   for (let i = 1; i <= counts.maxTargetedTherapies; i++) {
-    headers.push(`Targeted Therapy ${i}`)
+    push('therapeutic', `Targeted Therapy ${i}`)
   }
-  headers.push('Combination Therapy', 'Date Targeted Therapy', 'Time to Appropriate Therapy')
+  push('therapeutic', 'Combination Therapy', 'Date Targeted Therapy', 'Time to Appropriate Therapy')
 
   // Outcome
-  headers.push('30-day Mortality')
+  push('outcome', '30-day Mortality')
 
   return headers
 }
@@ -346,17 +363,19 @@ export async function exportPatientsToExcel(patients: any[], lookups: Lookups): 
   const antibiotics = lookups.astAntibiotics
 
   const counts = computeDynamicCounts(patients)
-  const headers = buildHeaders(counts, antibiotics)
+  const headerEntries = buildHeaders(counts, antibiotics)
+  const headerLabels = headerEntries.map(h => h.label)
 
   // --- Sheet 1: Data ---
   const dataSheet = workbook.addWorksheet('Data')
 
-  // Add header row
-  const headerRow = dataSheet.addRow(headers)
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true }
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  // Add header row with section colors
+  const headerRow = dataSheet.addRow(headerLabels)
+  headerRow.eachCell((cell, colNumber) => {
+    const entry = headerEntries[colNumber - 1]
+    const colors = SECTION_COLORS[entry.section]
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.bg } }
+    cell.font = { bold: true, color: { argb: colors.font } }
     cell.alignment = { horizontal: 'center', wrapText: true }
   })
 
@@ -370,10 +389,10 @@ export async function exportPatientsToExcel(patients: any[], lookups: Lookups): 
   }
 
   // Auto-filter
-  if (headers.length > 0) {
+  if (headerLabels.length > 0) {
     dataSheet.autoFilter = {
       from: { row: 1, column: 1 },
-      to: { row: 1, column: headers.length },
+      to: { row: 1, column: headerLabels.length },
     }
   }
 

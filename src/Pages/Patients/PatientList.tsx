@@ -16,6 +16,11 @@ const SEX_OPTIONS = [
   { value: '1', label: 'Male' },
 ]
 
+const OUTCOME_OPTIONS = [
+  { value: '1', label: 'Survivor' },
+  { value: '0', label: 'Non-survivor' },
+]
+
 const PatientList = () => {
   const navigate = useNavigate()
   const [patients, setPatients] = useState<any[]>([])
@@ -122,6 +127,7 @@ const PatientList = () => {
   const filterConfig = [
     { label: 'Name', name: 'name', type: 'text' as const, options: [] },
     { label: 'Sex', name: 'sex', type: 'select' as const, options: SEX_OPTIONS },
+    { label: 'Outcome', name: 'outcome', type: 'select' as const, options: OUTCOME_OPTIONS },
   ]
 
   const columns = [
@@ -145,6 +151,32 @@ const PatientList = () => {
       key: 'bsiDiagnosisDate',
       header: 'BSI Diagnosis Date',
       render: (value: string) => formatDate(value),
+    },
+    {
+      key: 'los',
+      header: 'LOS',
+      render: (value: number | null) => (value != null ? `${value}` : '-'),
+    },
+    {
+      key: 'outcome',
+      header: 'Outcome',
+      render: (value: number | null) => {
+        if (value === 1) {
+          return (
+            <span title="Survivor">
+              <i className="fa-solid fa-heart text-red-500 text-lg"></i>
+            </span>
+          )
+        }
+        if (value === 0) {
+          return (
+            <span title="Non-survivor">
+              <i className="fa-solid fa-heart-crack text-gray-400 text-lg"></i>
+            </span>
+          )
+        }
+        return '-'
+      },
     },
   ]
 
