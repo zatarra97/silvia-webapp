@@ -52,7 +52,7 @@ function buildHeaders(counts: DynamicCounts, antibiotics: any[]): string[] {
   for (let i = 1; i <= counts.maxIsolationSites; i++) {
     headers.push(`Site of Isolation ${i}`)
   }
-  headers.push('SOFA Score', 'Charlson Comorbidity Index')
+  headers.push('Admission Date', 'Discharge Date', 'LOS (days)', 'SOFA Score', 'Charlson Comorbidity Index')
 
   // Microbiological
   headers.push('Rectal Colonization Status', 'Rectal Colonization Pathogen')
@@ -116,6 +116,9 @@ function buildPatientRow(patient: any, counts: DynamicCounts, antibiotics: any[]
   for (let i = 0; i < counts.maxIsolationSites; i++) {
     row.push(isolationSites[i] ? toNumOrNull(isolationSites[i].siteOfIsolationId) : null)
   }
+  row.push(formatDateCell(patient.admissionDate))
+  row.push(formatDateCell(patient.dischargeDate))
+  row.push(toNumOrNull(patient.los))
   row.push(toNumOrNull(patient.sofaScore))
   row.push(toNumOrNull(patient.charlsonComorbidityIndex))
 
@@ -189,6 +192,9 @@ function buildDictFields(lookups: Lookups): DictField[] {
     { name: 'BSI onset', description: 'Mode of infection acquisition', section: 'CLINICAL DATA', type: 'enum', options: [{ id: 0, label: 'Community-acquired' }, { id: 1, label: 'Hospital-acquired' }, { id: 2, label: 'Healthcare-associated' }] },
     { name: 'BSI diagnosis date', description: 'Date of first positive blood culture', section: 'CLINICAL DATA', type: 'date' },
     { name: 'Site of isolation', description: '', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
+    { name: 'Admission date', description: 'Date of hospital admission', section: 'CLINICAL DATA', type: 'date' },
+    { name: 'Discharge date', description: 'Date of hospital discharge', section: 'CLINICAL DATA', type: 'date' },
+    { name: 'LOS (days)', description: 'Length of stay in days (minimum 1)', section: 'CLINICAL DATA', type: 'numeric' },
     { name: 'SOFA score', description: '', section: 'CLINICAL DATA', type: 'numeric' },
     { name: 'Charlson Comorbidity Index', description: '', section: 'CLINICAL DATA', type: 'numeric' },
 

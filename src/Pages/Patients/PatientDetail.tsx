@@ -121,6 +121,8 @@ const PatientDetail = () => {
 
   const watchedBsiDiagnosisDate = watch('bsiDiagnosisDate')
   const watchedDateTargetedTherapy = watch('dateTargetedTherapy')
+  const watchedAdmissionDate = watch('admissionDate')
+  const watchedDischargeDate = watch('dischargeDate')
 
   useEffect(() => {
     if (watchedBsiDiagnosisDate && watchedDateTargetedTherapy) {
@@ -131,6 +133,16 @@ const PatientDetail = () => {
       setValue('timeToAppropriateTherapy', diffDays < 0 ? 0 : diffDays)
     }
   }, [watchedBsiDiagnosisDate, watchedDateTargetedTherapy, setValue])
+
+  useEffect(() => {
+    if (watchedAdmissionDate && watchedDischargeDate) {
+      const start = new Date(watchedAdmissionDate)
+      const end = new Date(watchedDischargeDate)
+      const diffMs = end.getTime() - start.getTime()
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+      setValue('los', diffDays < 1 ? 1 : diffDays)
+    }
+  }, [watchedAdmissionDate, watchedDischargeDate, setValue])
 
   useEffect(() => {
     const fetchLookups = async () => {
@@ -780,6 +792,40 @@ const PatientDetail = () => {
                     error={errors.bsiDiagnosisDate ? { message: errors.bsiDiagnosisDate.message ?? '' } : undefined}
                   />
                 )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+              <Controller
+                name="admissionDate"
+                control={control}
+                render={({ field }) => (
+                  <DateTimePicker
+                    label="Admission date"
+                    value={field.value}
+                    onChange={(date) => field.onChange(date)}
+                    error={errors.admissionDate ? { message: errors.admissionDate.message ?? '' } : undefined}
+                  />
+                )}
+              />
+              <Controller
+                name="dischargeDate"
+                control={control}
+                render={({ field }) => (
+                  <DateTimePicker
+                    label="Discharge date"
+                    value={field.value}
+                    onChange={(date) => field.onChange(date)}
+                    error={errors.dischargeDate ? { message: errors.dischargeDate.message ?? '' } : undefined}
+                  />
+                )}
+              />
+              <Input
+                label="LOS (days)"
+                type="number"
+                {...register('los')}
+                error={errors.los ? { message: errors.los.message ?? '' } : undefined}
+                disabled
               />
             </div>
 
