@@ -171,7 +171,7 @@ const PatientDetail = () => {
   const mapPathogenEntries = (pathogens: any[], isolationSites: any[] | undefined): BsiPathogenEntry[] =>
     pathogens.map((bp: any, idx: number) => ({
       bsiPathogenId: bp.bsiPathogenId ?? null,
-      siteOfIsolationId: isolationSites?.[idx]?.siteOfIsolationId ?? null,
+      siteOfIsolationId: isolationSites?.[idx]?.siteOfIsolationId ?? bp.siteOfIsolationId ?? null,
       resistanceProfileIds: bp.resistanceProfiles
         ? bp.resistanceProfiles.map((rp: any) => rp.resistanceProfileId)
         : [],
@@ -292,7 +292,23 @@ const PatientDetail = () => {
           .filter((t) => t.antimicrobialTherapyId !== null && t.antimicrobialTherapyId !== '')
           .map((t, idx) => ({ antimicrobialTherapyId: Number(t.antimicrobialTherapyId), therapyOrder: idx + 1 })),
         bsiPathogens: buildPathogenPayload(bsiPathogens),
-        infectiousComplications: buildPathogenPayload(infectiousComplications),
+        infectiousComplications: infectiousComplications
+          .filter((bp) => bp.bsiPathogenId !== null && bp.bsiPathogenId !== '')
+          .map((bp, idx) => ({
+            bsiPathogenId: Number(bp.bsiPathogenId),
+            siteOfIsolationId: bp.siteOfIsolationId !== null && bp.siteOfIsolationId !== '' ? Number(bp.siteOfIsolationId) : null,
+            pathogenOrder: idx + 1,
+            resistanceProfiles: bp.resistanceProfileIds.map((rpId) => ({
+              resistanceProfileId: rpId,
+            })),
+            astResults: bp.astResults
+              .filter((ar) => ar.astAntibioticId !== null)
+              .map((ar) => ({
+                astAntibioticId: ar.astAntibioticId!,
+                astValue: ar.astValue !== null && ar.astValue !== '' ? Number(ar.astValue) : null,
+                micValue: ar.micValue || null,
+              })),
+          })),
       }
 
       if (isEdit) {
