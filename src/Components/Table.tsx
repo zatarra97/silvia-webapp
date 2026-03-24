@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useState, useMemo } from "react"
 import Skeleton from "react-loading-skeleton"
 import "react-loading-skeleton/dist/skeleton.css"
 
@@ -8,6 +8,7 @@ interface Column {
 	type?: "image" | "text" | "note"
 	width?: string
 	render?: (value: any, item?: any) => React.ReactNode
+	sortable?: boolean
 	// Customization options for 'note' type
 	noteIcon?: string
 	noteColorClass?: string
@@ -25,11 +26,62 @@ interface TableProps {
 	data: any[]
 	actions?: Action[]
 	loading?: boolean
+	sortable?: boolean
 }
 
-const Table = ({ columns, data, actions, loading }: TableProps) => {
+type SortDirection = "asc" | "desc" | null
+
+const Table = ({ columns, data, actions, loading, sortable = false }: TableProps) => {
+	const [sortKey, setSortKey] = useState<string | null>(null)
+	const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+
 	const getValueByPath = (obj: any, path: string): any => {
 		return path.split(".").reduce((acc, part) => acc && acc[part], obj)
+	}
+
+	const handleSort = (key: string) => {
+		if (sortKey === key) {
+			if (sortDirection === "asc") setSortDirection("desc")
+			else if (sortDirection === "desc") { setSortKey(null); setSortDirection(null) }
+			else setSortDirection("asc")
+		} else {
+			setSortKey(key)
+			setSortDirection("asc")
+		}
+	}
+
+	const sortedData = useMemo(() => {
+		if (!sortKey || !sortDirection) return data
+		return [...data].sort((a, b) => {
+			const valA = getValueByPath(a, sortKey)
+			const valB = getValueByPath(b, sortKey)
+			if (valA == null && valB == null) return 0
+			if (valA == null) return 1
+			if (valB == null) return -1
+			if (typeof valA === "number" && typeof valB === "number") {
+				return sortDirection === "asc" ? valA - valB : valB - valA
+			}
+			const strA = String(valA).toLowerCase()
+			const strB = String(valB).toLowerCase()
+			if (strA < strB) return sortDirection === "asc" ? -1 : 1
+			if (strA > strB) return sortDirection === "asc" ? 1 : -1
+			return 0
+		})
+	}, [data, sortKey, sortDirection])
+
+	const renderSortIcon = (key: string) => {
+		if (sortKey !== key || !sortDirection) {
+			return <i className="fa-solid fa-sort text-gray-500 ml-1.5 text-xs"></i>
+		}
+		if (sortDirection === "asc") {
+			return <i className="fa-solid fa-sort-up text-blue-600 ml-1.5 text-xs"></i>
+		}
+		return <i className="fa-solid fa-sort-down text-blue-600 ml-1.5 text-xs"></i>
+	}
+
+	const isColumnSortable = (column: Column) => {
+		if (column.sortable !== undefined) return column.sortable
+		return sortable
 	}
 
 	if (loading) {
@@ -133,22 +185,27 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 									Actions
 								</th>
 							)}
-							{columns.map((column, index) => (
-								<th
-									key={column.key}
-									scope="col"
-									className={`px-6 py-5 font-semibold tracking-wide ${
-										index < columns.length - 1 ? "border-r border-gray-200" : ""
-									}`}
-									style={column.width ? { width: column.width } : undefined}
-								>
-									{column.header}
-								</th>
-							))}
+							{columns.map((column, index) => {
+								const colSortable = isColumnSortable(column)
+								return (
+									<th
+										key={column.key}
+										scope="col"
+										className={`px-6 py-5 font-semibold tracking-wide ${
+											index < columns.length - 1 ? "border-r border-gray-200" : ""
+										} ${colSortable ? "cursor-pointer select-none hover:bg-slate-300/50 transition-colors duration-200" : ""}`}
+										style={column.width ? { width: column.width } : undefined}
+										onClick={colSortable ? () => handleSort(column.key) : undefined}
+									>
+										{column.header}
+										{colSortable && renderSortIcon(column.key)}
+									</th>
+								)
+							})}
 						</tr>
 					</thead>
 					<tbody>
-						{data.map((item, index) => (
+						{sortedData.map((item, index) => (
 							<tr
 								key={index}
 								className="border-b border-gray-100 odd:bg-white even:bg-gray-50/50 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-sm hover:border-blue-200 transition-all duration-300 group"
@@ -273,22 +330,27 @@ const Table = ({ columns, data, actions, loading }: TableProps) => {
 										className="sticky left-0 bg-gradient-to-r from-slate-200 to-slate-300 px-3 py-4 w-auto font-semibold tracking-wide border-r border-gray-200"
 									></th>
 								)}
-								{columns.map((column, index) => (
+								{columns.map((column, index) => {
+								const colSortable = isColumnSortable(column)
+								return (
 									<th
 										key={column.key}
 										scope="col"
 										className={`px-3 py-4 whitespace-nowrap font-semibold tracking-wide ${
 											index < columns.length - 1 ? "border-r border-gray-200" : ""
-										}`}
+										} ${colSortable ? "cursor-pointer select-none" : ""}`}
 										style={column.width ? { width: column.width } : undefined}
+										onClick={colSortable ? () => handleSort(column.key) : undefined}
 									>
 										{column.header}
+										{colSortable && renderSortIcon(column.key)}
 									</th>
-								))}
+								)
+							})}
 							</tr>
 						</thead>
 						<tbody>
-							{data.map((item, index) => {
+							{sortedData.map((item, index) => {
 								const rowBgClass = index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
 
 								return (

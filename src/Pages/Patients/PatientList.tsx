@@ -148,6 +148,11 @@ const PatientList = () => {
       },
     },
     {
+      key: 'admissionDate',
+      header: 'Admission Date',
+      render: (value: string) => formatDate(value),
+    },
+    {
       key: 'bsiDiagnosisDate',
       header: 'BSI Diagnosis Date',
       render: (value: string) => formatDate(value),
@@ -225,7 +230,7 @@ const PatientList = () => {
           entity={ENTITIES.PATIENTS}
           values={filters}
         />
-        <Table columns={columns} data={patients} actions={actions} loading={loading} />
+        <Table columns={columns} data={patients} actions={actions} loading={loading} sortable />
         {totalPages > 1 && (
           <Pagination
             currentPage={currentPage}
