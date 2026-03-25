@@ -17,6 +17,8 @@ interface DynamicCounts {
   maxTargetedTherapies: number
   maxBsiPathogens: number
   maxResistanceProfiles: number
+  maxIcPathogens: number
+  maxIcResistanceProfiles: number
 }
 
 function computeDynamicCounts(patients: any[]): DynamicCounts {
@@ -25,6 +27,8 @@ function computeDynamicCounts(patients: any[]): DynamicCounts {
   let maxTargetedTherapies = 0
   let maxBsiPathogens = 0
   let maxResistanceProfiles = 0
+  let maxIcPathogens = 0
+  let maxIcResistanceProfiles = 0
 
   for (const p of patients) {
     maxIsolationSites = Math.max(maxIsolationSites, p.isolationSites?.length || 0)
@@ -36,9 +40,15 @@ function computeDynamicCounts(patients: any[]): DynamicCounts {
         maxResistanceProfiles = Math.max(maxResistanceProfiles, bp.resistanceProfiles?.length || 0)
       }
     }
+    maxIcPathogens = Math.max(maxIcPathogens, p.infectiousComplications?.length || 0)
+    if (p.infectiousComplications) {
+      for (const ic of p.infectiousComplications) {
+        maxIcResistanceProfiles = Math.max(maxIcResistanceProfiles, ic.resistanceProfiles?.length || 0)
+      }
+    }
   }
 
-  return { maxIsolationSites, maxEmpiricalTherapies, maxTargetedTherapies, maxBsiPathogens, maxResistanceProfiles }
+  return { maxIsolationSites, maxEmpiricalTherapies, maxTargetedTherapies, maxBsiPathogens, maxResistanceProfiles, maxIcPathogens, maxIcResistanceProfiles }
 }
 
 interface HeaderEntry {
@@ -83,6 +93,18 @@ function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] 
     for (const ab of antibiotics) {
       push('microbiological', `AST ${ab.name} ${b}`)
       push('microbiological', `MIC ${ab.name} ${b}`)
+    }
+  }
+
+  // IC blocks
+  for (let b = 1; b <= counts.maxIcPathogens; b++) {
+    push('microbiological', `IC Pathogen ${b}`, `IC Site of Isolation ${b}`)
+    for (let r = 1; r <= counts.maxIcResistanceProfiles; r++) {
+      push('microbiological', `IC Resistance Profile ${b}.${r}`)
+    }
+    for (const ab of antibiotics) {
+      push('microbiological', `IC AST ${ab.name} ${b}`)
+      push('microbiological', `IC MIC ${ab.name} ${b}`)
     }
   }
 
@@ -164,6 +186,28 @@ function buildPatientRow(patient: any, counts: DynamicCounts, antibiotics: any[]
     }
   }
 
+  // IC blocks
+  const icPathogens = patient.infectiousComplications || []
+  for (let b = 0; b < counts.maxIcPathogens; b++) {
+    const ic = icPathogens[b]
+    row.push(ic ? toNumOrNull(ic.bsiPathogenId) : null)
+    row.push(ic ? toNumOrNull(ic.siteOfIsolationId) : null)
+
+    // Resistance profiles
+    const icRps = ic?.resistanceProfiles || []
+    for (let r = 0; r < counts.maxIcResistanceProfiles; r++) {
+      row.push(icRps[r] ? toNumOrNull(icRps[r].resistanceProfileId) : null)
+    }
+
+    // AST/MIC per antibiotic
+    const icAstResults = ic?.astResults || []
+    for (const ab of antibiotics) {
+      const ar = icAstResults.find((a: any) => a.astAntibioticId === ab.id)
+      row.push(ar ? toNumOrNull(ar.astValue) : null)
+      row.push(ar?.micValue || null)
+    }
+  }
+
   row.push(toNumOrNull(patient.monoPoliMicrobial))
 
   // Therapeutic
@@ -220,6 +264,9 @@ function buildDictFields(lookups: Lookups): DictField[] {
     { name: 'Rectal colonization pathogen', description: 'Rectal colonization pathogen (if any)', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
     { name: 'BSI causative pathogen', description: 'Name of the microorganism isolated from blood', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
     { name: 'Resistance profile', description: 'Main resistance mechanism or phenotype', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
+    { name: 'IC causative pathogen', description: 'Name of the microorganism isolated from infectious complication', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
+    { name: 'IC site of isolation', description: 'Site of isolation for infectious complication pathogen', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
+    { name: 'IC resistance profile', description: 'Resistance mechanism for infectious complication pathogen', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
     { name: 'Mono- or poli-microbial infection', description: 'BSI caused by a single microorganism or by multiple microorganisms', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'Monomicrobial' }, { id: 1, label: 'Polymicrobial' }] },
     { name: 'Antibiotic susceptibility testing (AST)', description: 'Result of antimicrobial susceptibility testing for each antibiotic', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'Not available / not tested' }, { id: 1, label: 'Resistant' }, { id: 2, label: 'Susceptible' }, { id: 3, label: 'Intermediate' }] },
     { name: 'Minimum Inhibitory Concentration (MIC)', description: 'Lowest antibiotic concentration inhibiting bacterial growth', section: 'MICROBIOLOGICAL DATA', type: 'numeric' },
