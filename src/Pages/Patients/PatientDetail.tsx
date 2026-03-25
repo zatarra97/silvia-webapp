@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -87,6 +87,9 @@ const PatientDetail = () => {
   const [targetedTherapies, setTargetedTherapies] = useState<{ antimicrobialTherapyId: string | number | null }[]>([])
   const [bsiPathogens, setBsiPathogens] = useState<BsiPathogenEntry[]>([])
   const [infectiousComplications, setInfectiousComplications] = useState<BsiPathogenEntry[]>([])
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [pdfOrientation, setPdfOrientation] = useState<'landscape' | 'portrait'>('landscape')
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const {
     register,
@@ -95,6 +98,7 @@ const PatientDetail = () => {
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -325,6 +329,66 @@ const PatientDetail = () => {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleExportPdf = () => {
+    if (!contentRef.current) return
+
+    const patientName = getValues('name') || 'patient'
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Please allow popups to export PDF')
+      return
+    }
+
+    // Collect all stylesheets from the current page
+    const styleSheets = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('\n')
+
+    // Sync input/textarea/select values to attributes so innerHTML captures them
+    contentRef.current.querySelectorAll('input, textarea').forEach((el) => {
+      const input = el as HTMLInputElement | HTMLTextAreaElement
+      input.setAttribute('value', input.value)
+    })
+    contentRef.current.querySelectorAll('select').forEach((el) => {
+      const select = el as HTMLSelectElement
+      Array.from(select.options).forEach((opt) => {
+        if (opt.selected) opt.setAttribute('selected', 'selected')
+        else opt.removeAttribute('selected')
+      })
+    })
+
+    const content = contentRef.current.innerHTML
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>${patientName}</title>
+  ${styleSheets}
+  <style>
+    @media print {
+      body { margin: 0; }
+      @page { size: ${pdfOrientation}; margin: 10mm; }
+    }
+    body { background: white; }
+    ${pdfOrientation === 'landscape' ? '.container { max-width: 100% !important; width: 120% !important; transform: scale(1); transform-origin: top left; }' : ''}
+  </style>
+</head>
+<body>
+  <div class="container mx-auto p-6" style="${pdfOrientation === 'landscape' ? 'max-width:100%;' : ''}">${content}</div>
+</body>
+</html>`)
+    printWindow.document.close()
+
+    // Wait for styles to load, then print
+    printWindow.onload = () => {
+      printWindow.focus()
+      printWindow.print()
+      printWindow.onafterprint = () => printWindow.close()
+    }
+
+    setPdfModalOpen(false)
   }
 
   // Empirical therapies helpers
@@ -716,6 +780,12 @@ const PatientDetail = () => {
         backButton={{ route: '/admin/patients' }}
         buttons={[
           {
+            label: 'Export PDF',
+            icon: 'fa-solid fa-file-pdf',
+            onClick: () => setPdfModalOpen(true),
+            variant: 'csv' as const,
+          },
+          {
             label: saving ? 'Saving...' : 'Save',
             icon: 'fa-solid fa-floppy-disk',
             onClick: handleSubmit(onSubmit),
@@ -725,7 +795,7 @@ const PatientDetail = () => {
           },
         ]}
       />
-      <div className="container mx-auto p-6">
+      <div ref={contentRef} className="container mx-auto p-6">
         <FormErrors errors={errors} />
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -1081,6 +1151,67 @@ const PatientDetail = () => {
           </FormSection>
         </form>
       </div>
+
+      {/* PDF Export Modal */}
+      {pdfModalOpen && (
+        <div className="relative z-50" role="dialog" aria-modal="true">
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity" onClick={() => setPdfModalOpen(false)}></div>
+          <div className="fixed inset-0 z-50 w-screen overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+              <div className="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl ring-1 ring-blue-100 transition-all sm:my-8 sm:w-full sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute right-3 top-3">
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 focus:outline-none cursor-pointer"
+                    onClick={() => setPdfModalOpen(false)}
+                  >
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <div className="bg-white px-6 pb-6 pt-7 sm:p-8">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white ring-4 ring-blue-50">
+                      <i className="fa-solid fa-file-pdf text-lg"></i>
+                    </div>
+                    <div className="mt-0 sm:text-left">
+                      <h3 className="text-xl font-bold leading-7 text-gray-900">Export PDF</h3>
+                      <p className="mt-2 text-sm text-gray-600">Choose the page orientation for the PDF export.</p>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Orientation</label>
+                    <select
+                      value={pdfOrientation}
+                      onChange={(e) => setPdfOrientation(e.target.value as 'landscape' | 'portrait')}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="landscape">Landscape</option>
+                      <option value="portrait">Portrait</option>
+                    </select>
+                  </div>
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      className="inline-flex min-w-24 justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setPdfModalOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex min-w-28 justify-center rounded-md px-4 py-2 text-sm font-semibold text-white shadow-sm cursor-pointer bg-blue-600 hover:bg-blue-500"
+                      onClick={handleExportPdf}
+                    >
+                      Export PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
