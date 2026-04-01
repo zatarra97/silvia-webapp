@@ -32,7 +32,7 @@ const PatientList = () => {
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [itemsPerPage, setItemsPerPage] = useState(250)
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [exporting, setExporting] = useState(false)
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; item: any | null; isLoading: boolean }>({
