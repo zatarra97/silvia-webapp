@@ -164,6 +164,15 @@ const PatientList = () => {
       render: (value: string) => formatDate(value),
     },
     {
+      key: 'combinationTherapy',
+      header: 'Combination Therapy',
+      render: (value: number | null) => {
+        if (value === 1) return 'Yes'
+        if (value === 0) return 'No'
+        return '-'
+      },
+    },
+    {
       key: 'los',
       header: 'LOS',
       render: (value: number | null) => (value != null ? `${value}` : '-'),
