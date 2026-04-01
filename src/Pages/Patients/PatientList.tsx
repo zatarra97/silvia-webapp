@@ -21,6 +21,11 @@ const OUTCOME_OPTIONS = [
   { value: '0', label: 'Non-survivor' },
 ]
 
+const COMBINATION_THERAPY_OPTIONS = [
+  { value: '1', label: 'Yes' },
+  { value: '0', label: 'No' },
+]
+
 const PatientList = () => {
   const navigate = useNavigate()
   const [patients, setPatients] = useState<any[]>([])
@@ -128,6 +133,7 @@ const PatientList = () => {
     { label: 'Name', name: 'name', type: 'text' as const, options: [] },
     { label: 'Sex', name: 'sex', type: 'select' as const, options: SEX_OPTIONS },
     { label: 'Outcome', name: 'outcome', type: 'select' as const, options: OUTCOME_OPTIONS },
+    { label: 'Combination Therapy', name: 'combinationTherapy', type: 'select' as const, options: COMBINATION_THERAPY_OPTIONS },
   ]
 
   const columns = [
