@@ -68,6 +68,16 @@ const SECTION_COLORS: Record<HeaderEntry['section'], { bg: string; font: string 
   outcome:                { bg: 'FF84CC16', font: 'FFFFFFFF' }, // lime
 }
 
+// Intestazioni di sezione usate nel foglio "Data dictionary"
+const SECTION_TITLES: Record<HeaderEntry['section'], string> = {
+  demographic:            'DEMOGRAPHIC DATA',
+  clinical:               'CLINICAL DATA',
+  microbiological:        'MICROBIOLOGICAL DATA',
+  infectiousComplication: 'INFECTIOUS COMPLICATION',
+  therapeutic:            'THERAPEUTIC DATA',
+  outcome:                'OUTCOME',
+}
+
 function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] {
   const headers: HeaderEntry[] = []
   const push = (section: HeaderEntry['section'], ...labels: string[]) => {
@@ -235,7 +245,7 @@ function buildPatientRow(patient: any, counts: DynamicCounts, antibiotics: any[]
 interface DictField {
   name: string
   description: string
-  section: string
+  section: HeaderEntry['section']
   type: 'enum' | 'numeric' | 'date' | 'text'
   options?: { id: number; label: string }[]
 }
@@ -245,42 +255,42 @@ function buildDictFields(lookups: Lookups): DictField[] {
 
   return [
     // DEMOGRAPHIC DATA
-    { name: 'ID patient', description: 'Unique patient identifier', section: 'DEMOGRAPHIC DATA', type: 'text', options: [{ id: 0, label: 'code number' }] },
-    { name: 'Age', description: 'Date of birth', section: 'DEMOGRAPHIC DATA', type: 'date' },
-    { name: 'Sex', description: '', section: 'DEMOGRAPHIC DATA', type: 'enum', options: [{ id: 0, label: 'Female' }, { id: 1, label: 'Male' }] },
+    { name: 'ID patient', description: 'Unique patient identifier', section: 'demographic', type: 'text', options: [{ id: 0, label: 'code number' }] },
+    { name: 'Age', description: 'Date of birth', section: 'demographic', type: 'date' },
+    { name: 'Sex', description: '', section: 'demographic', type: 'enum', options: [{ id: 0, label: 'Female' }, { id: 1, label: 'Male' }] },
 
     // CLINICAL DATA
-    { name: 'Ward of admission', description: 'Hospital ward at admission', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.wards).map(w => ({ id: w.id, label: w.name })) },
-    { name: 'BSI onset', description: 'Mode of infection acquisition', section: 'CLINICAL DATA', type: 'enum', options: [{ id: 0, label: 'Community-acquired' }, { id: 1, label: 'Hospital-acquired' }, { id: 2, label: 'Healthcare-associated' }] },
-    { name: 'BSI diagnosis date', description: 'Date of first positive blood culture', section: 'CLINICAL DATA', type: 'date' },
-    { name: 'Site of isolation', description: '', section: 'CLINICAL DATA', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
-    { name: 'Admission date', description: 'Date of hospital admission', section: 'CLINICAL DATA', type: 'date' },
-    { name: 'Discharge date', description: 'Date of hospital discharge', section: 'CLINICAL DATA', type: 'date' },
-    { name: 'LOS (days)', description: 'Length of stay in days (minimum 1)', section: 'CLINICAL DATA', type: 'numeric' },
-    { name: 'SOFA score', description: '', section: 'CLINICAL DATA', type: 'numeric' },
-    { name: 'Charlson Comorbidity Index', description: '', section: 'CLINICAL DATA', type: 'numeric' },
+    { name: 'Ward of admission', description: 'Hospital ward at admission', section: 'clinical', type: 'enum', options: sortById(lookups.wards).map(w => ({ id: w.id, label: w.name })) },
+    { name: 'BSI onset', description: 'Mode of infection acquisition', section: 'clinical', type: 'enum', options: [{ id: 0, label: 'Community-acquired' }, { id: 1, label: 'Hospital-acquired' }, { id: 2, label: 'Healthcare-associated' }] },
+    { name: 'BSI diagnosis date', description: 'Date of first positive blood culture', section: 'clinical', type: 'date' },
+    { name: 'Site of isolation', description: '', section: 'clinical', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
+    { name: 'Admission date', description: 'Date of hospital admission', section: 'clinical', type: 'date' },
+    { name: 'Discharge date', description: 'Date of hospital discharge', section: 'clinical', type: 'date' },
+    { name: 'LOS (days)', description: 'Length of stay in days (minimum 1)', section: 'clinical', type: 'numeric' },
+    { name: 'SOFA score', description: '', section: 'clinical', type: 'numeric' },
+    { name: 'Charlson Comorbidity Index', description: '', section: 'clinical', type: 'numeric' },
 
     // MICROBIOLOGICAL DATA
-    { name: 'Rectal colonization', description: 'Detection of multidrug-resistant organisms by rectal swab', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
-    { name: 'Rectal colonization pathogen', description: 'Rectal colonization pathogen (if any)', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
-    { name: 'BSI causative pathogen', description: 'Name of the microorganism isolated from blood', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
-    { name: 'Resistance profile', description: 'Main resistance mechanism or phenotype', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
-    { name: 'IC causative pathogen', description: 'Name of the microorganism isolated from infectious complication', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
-    { name: 'IC site of isolation', description: 'Site of isolation for infectious complication pathogen', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
-    { name: 'IC resistance profile', description: 'Resistance mechanism for infectious complication pathogen', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
-    { name: 'Mono- or poli-microbial infection', description: 'BSI caused by a single microorganism or by multiple microorganisms', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'Monomicrobial' }, { id: 1, label: 'Polymicrobial' }] },
-    { name: 'Antibiotic susceptibility testing (AST)', description: 'Result of antimicrobial susceptibility testing for each antibiotic', section: 'MICROBIOLOGICAL DATA', type: 'enum', options: [{ id: 0, label: 'Not available / not tested' }, { id: 1, label: 'Resistant' }, { id: 2, label: 'Susceptible' }, { id: 3, label: 'Intermediate' }] },
-    { name: 'Minimum Inhibitory Concentration (MIC)', description: 'Lowest antibiotic concentration inhibiting bacterial growth', section: 'MICROBIOLOGICAL DATA', type: 'numeric' },
+    { name: 'Rectal colonization', description: 'Detection of multidrug-resistant organisms by rectal swab', section: 'microbiological', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
+    { name: 'Rectal colonization pathogen', description: 'Rectal colonization pathogen (if any)', section: 'microbiological', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
+    { name: 'BSI causative pathogen', description: 'Name of the microorganism isolated from blood', section: 'microbiological', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
+    { name: 'Resistance profile', description: 'Main resistance mechanism or phenotype', section: 'microbiological', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
+    { name: 'IC causative pathogen', description: 'Name of the microorganism isolated from infectious complication', section: 'microbiological', type: 'enum', options: sortById(lookups.bsiPathogens).map(p => ({ id: p.id, label: p.name })) },
+    { name: 'IC site of isolation', description: 'Site of isolation for infectious complication pathogen', section: 'microbiological', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
+    { name: 'IC resistance profile', description: 'Resistance mechanism for infectious complication pathogen', section: 'microbiological', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
+    { name: 'Mono- or poli-microbial infection', description: 'BSI caused by a single microorganism or by multiple microorganisms', section: 'microbiological', type: 'enum', options: [{ id: 0, label: 'Monomicrobial' }, { id: 1, label: 'Polymicrobial' }] },
+    { name: 'Antibiotic susceptibility testing (AST)', description: 'Result of antimicrobial susceptibility testing for each antibiotic', section: 'microbiological', type: 'enum', options: [{ id: 0, label: 'Not available / not tested' }, { id: 1, label: 'Resistant' }, { id: 2, label: 'Susceptible' }, { id: 3, label: 'Intermediate' }] },
+    { name: 'Minimum Inhibitory Concentration (MIC)', description: 'Lowest antibiotic concentration inhibiting bacterial growth', section: 'microbiological', type: 'numeric' },
 
     // THERAPEUTIC DATA
-    { name: 'Empirical antimicrobial therapy', description: 'Antibiotic treatment initiated before availability of microbiological results', section: 'THERAPEUTIC DATA', type: 'enum', options: sortById(lookups.therapies).map(t => ({ id: t.id, label: t.name })) },
-    { name: 'Targeted therapy', description: 'Antibiotic treatment according to pathogen identification and resistance profile', section: 'THERAPEUTIC DATA', type: 'enum', options: sortById(lookups.therapies).map(t => ({ id: t.id, label: t.name })) },
-    { name: 'Combination therapy', description: '', section: 'THERAPEUTIC DATA', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
-    { name: 'Time to appropriate therapy (days)', description: 'Time interval between BSI diagnosis date and initiation of an appropriate antimicrobial therapy', section: 'THERAPEUTIC DATA', type: 'numeric' },
-    { name: 'Date targeted therapy', description: '', section: 'THERAPEUTIC DATA', type: 'date' },
+    { name: 'Empirical antimicrobial therapy', description: 'Antibiotic treatment initiated before availability of microbiological results', section: 'therapeutic', type: 'enum', options: sortById(lookups.therapies).map(t => ({ id: t.id, label: t.name })) },
+    { name: 'Targeted therapy', description: 'Antibiotic treatment according to pathogen identification and resistance profile', section: 'therapeutic', type: 'enum', options: sortById(lookups.therapies).map(t => ({ id: t.id, label: t.name })) },
+    { name: 'Combination therapy', description: '', section: 'therapeutic', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
+    { name: 'Time to appropriate therapy (days)', description: 'Time interval between BSI diagnosis date and initiation of an appropriate antimicrobial therapy', section: 'therapeutic', type: 'numeric' },
+    { name: 'Date targeted therapy', description: '', section: 'therapeutic', type: 'date' },
 
     // OUTCOME
-    { name: '30-day mortality', description: '', section: 'OUTCOME', type: 'enum', options: [{ id: 0, label: 'Non-survivor' }, { id: 1, label: 'Survivor' }] },
+    { name: '30-day mortality', description: '', section: 'outcome', type: 'enum', options: [{ id: 0, label: 'Non-survivor' }, { id: 1, label: 'Survivor' }] },
   ]
 }
 
@@ -307,13 +317,14 @@ function buildDictionarySheet(workbook: ExcelJS.Workbook, lookups: Lookups): voi
   }
 
   // --- Row 1: Section headers ---
-  const sectionHeaderFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
-  const sectionHeaderFont: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+  // Stessi colori delle intestazioni del foglio "Data": le due schede si
+  // leggono con la stessa chiave visiva.
+  const sectionHeaderFont: Partial<ExcelJS.Font> = { bold: true, size: 11 }
 
   // Group fields by section to merge section headers
-  let prevSection = ''
+  let prevSection: HeaderEntry['section'] | null = null
   let sectionStart = 0
-  const sectionRanges: { section: string; start: number; end: number }[] = []
+  const sectionRanges: { section: HeaderEntry['section']; start: number; end: number }[] = []
   for (const cm of colMap) {
     if (cm.field.section !== prevSection) {
       if (prevSection) {
@@ -328,10 +339,12 @@ function buildDictionarySheet(workbook: ExcelJS.Workbook, lookups: Lookups): voi
   }
 
   for (const sr of sectionRanges) {
+    const colors = SECTION_COLORS[sr.section]
+    const sectionFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.bg } }
     const cell = sheet.getCell(1, sr.start)
-    cell.value = sr.section
-    cell.font = sectionHeaderFont
-    cell.fill = sectionHeaderFill
+    cell.value = SECTION_TITLES[sr.section]
+    cell.font = { ...sectionHeaderFont, color: { argb: colors.font } }
+    cell.fill = sectionFill
     cell.alignment = { horizontal: 'center' }
     if (sr.end > sr.start) {
       sheet.mergeCells(1, sr.start, 1, sr.end)
@@ -339,7 +352,7 @@ function buildDictionarySheet(workbook: ExcelJS.Workbook, lookups: Lookups): voi
     // Fill background on all cells in range
     for (let c = sr.start; c <= sr.end; c++) {
       const fc = sheet.getCell(1, c)
-      fc.fill = sectionHeaderFill
+      fc.fill = sectionFill
     }
   }
 
