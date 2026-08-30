@@ -53,16 +53,19 @@ function computeDynamicCounts(patients: any[]): DynamicCounts {
 
 interface HeaderEntry {
   label: string
-  section: 'demographic' | 'clinical' | 'microbiological' | 'therapeutic' | 'outcome'
+  section: 'demographic' | 'clinical' | 'microbiological' | 'infectiousComplication' | 'therapeutic' | 'outcome'
 }
 
-// Colors matching the form sections: green, cyan, amber, fuchsia, lime
+// Colors matching the form sections: green, cyan, amber, orange, fuchsia, lime.
+// Le complicanze infettive condividono la sezione microbiologica ma usano
+// l'arancione, per distinguerle a colpo d'occhio dai patogeni della BSI.
 const SECTION_COLORS: Record<HeaderEntry['section'], { bg: string; font: string }> = {
-  demographic:     { bg: 'FF22C55E', font: 'FFFFFFFF' }, // green
-  clinical:        { bg: 'FF06B6D4', font: 'FFFFFFFF' }, // cyan
-  microbiological: { bg: 'FFF59E0B', font: 'FFFFFFFF' }, // amber
-  therapeutic:     { bg: 'FFD946EF', font: 'FFFFFFFF' }, // fuchsia
-  outcome:         { bg: 'FF84CC16', font: 'FFFFFFFF' }, // lime
+  demographic:            { bg: 'FF22C55E', font: 'FFFFFFFF' }, // green
+  clinical:               { bg: 'FF06B6D4', font: 'FFFFFFFF' }, // cyan
+  microbiological:        { bg: 'FFF59E0B', font: 'FFFFFFFF' }, // amber
+  infectiousComplication: { bg: 'FFEA580C', font: 'FFFFFFFF' }, // orange
+  therapeutic:            { bg: 'FFD946EF', font: 'FFFFFFFF' }, // fuchsia
+  outcome:                { bg: 'FF84CC16', font: 'FFFFFFFF' }, // lime
 }
 
 function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] {
@@ -71,8 +74,8 @@ function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] 
     for (const label of labels) headers.push({ label, section })
   }
 
-  // Demographics
-  push('demographic', 'Name', 'ID', 'Date of Birth', 'Sex')
+  // Demographics — il nome del paziente non viene esportato
+  push('demographic', 'ID', 'Date of Birth', 'Sex')
 
   // Clinical
   push('clinical', 'Ward of Admission', 'BSI Onset', 'BSI Diagnosis Date')
@@ -98,13 +101,13 @@ function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] 
 
   // IC blocks
   for (let b = 1; b <= counts.maxIcPathogens; b++) {
-    push('microbiological', `IC Pathogen ${b}`, `IC Site of Isolation ${b}`)
+    push('infectiousComplication', `IC Pathogen ${b}`, `IC Site of Isolation ${b}`)
     for (let r = 1; r <= counts.maxIcResistanceProfiles; r++) {
-      push('microbiological', `IC Resistance Profile ${b}.${r}`)
+      push('infectiousComplication', `IC Resistance Profile ${b}.${r}`)
     }
     for (const ab of antibiotics) {
-      push('microbiological', `IC AST ${ab.name} ${b}`)
-      push('microbiological', `IC MIC ${ab.name} ${b}`)
+      push('infectiousComplication', `IC AST ${ab.name} ${b}`)
+      push('infectiousComplication', `IC MIC ${ab.name} ${b}`)
     }
   }
 
@@ -140,8 +143,7 @@ function toNumOrNull(value: any): number | null {
 function buildPatientRow(patient: any, counts: DynamicCounts, antibiotics: any[]): (string | number | null)[] {
   const row: (string | number | null)[] = []
 
-  // Demographics
-  row.push(patient.name || null)
+  // Demographics — il nome del paziente non viene esportato
   row.push(patient.internalId || null)
   row.push(formatDateCell(patient.dateOfBirth))
   row.push(toNumOrNull(patient.sex))
@@ -243,7 +245,6 @@ function buildDictFields(lookups: Lookups): DictField[] {
 
   return [
     // DEMOGRAPHIC DATA
-    { name: 'Name', description: 'Patient name', section: 'DEMOGRAPHIC DATA', type: 'text', options: [{ id: 0, label: 'text' }] },
     { name: 'ID patient', description: 'Unique patient identifier', section: 'DEMOGRAPHIC DATA', type: 'text', options: [{ id: 0, label: 'code number' }] },
     { name: 'Age', description: 'Date of birth', section: 'DEMOGRAPHIC DATA', type: 'date' },
     { name: 'Sex', description: '', section: 'DEMOGRAPHIC DATA', type: 'enum', options: [{ id: 0, label: 'Female' }, { id: 1, label: 'Male' }] },

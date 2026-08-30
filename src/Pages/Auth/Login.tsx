@@ -4,10 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { toast } from "react-toastify"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import logoOrizzontale from "../../Images/logo.png"
 import Input from "../../Components/Input"
 import AuthLayout from "../../Components/AuthLayout"
-import { LOCAL_STORAGE_KEYS, DEFAULT_ROUTE_BY_ROLE, resolveRole } from "../../constants"
+import { LOCAL_STORAGE_KEYS, DEFAULT_ROUTE, DEFAULT_ROUTE_BY_ROLE, resolveRole } from "../../constants"
 import "./Auth.css"
 import {
 	loginSchema,
@@ -112,7 +111,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setIsAuthenticated, setUser, setU
 
 			setIsAuthenticated(true)
 			setUser(cognitoUser)
-			const defaultRoute = DEFAULT_ROUTE_BY_ROLE[role] ?? "/user/dashboard"
+			const defaultRoute = DEFAULT_ROUTE_BY_ROLE[role] ?? DEFAULT_ROUTE
 			navigate(returnUrl && returnUrl !== "/" ? returnUrl : defaultRoute)
 			localStorage.removeItem(LOCAL_STORAGE_KEYS.RETURN_URL)
 		} catch (err: unknown) {
@@ -228,7 +227,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ setIsAuthenticated, setUser, setU
 		}
 	}
 
-	return <AuthLayout logo={logoOrizzontale}>{renderCurrentView()}</AuthLayout>
+	return <AuthLayout>{renderCurrentView()}</AuthLayout>
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onForgotPassword, loading }) => {
@@ -244,17 +243,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onForgotPassword, loadin
 
 	return (
 		<div className="space-y-8">
-			<div className="space-y-1 text-center">
-				<h1 className="text-2xl font-bold text-slate-900 tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+			<div className="space-y-1.5">
+				<h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
 					Accedi
 				</h1>
-				<p className="text-sm text-slate-500">Inserisci email e password per continuare.</p>
+				<p className="text-sm text-slate-500">Inserisci le credenziali per accedere al registro clinico.</p>
 			</div>
 			<form className="space-y-5" onSubmit={handleSubmit(onLogin)}>
 				<div className="auth-input-wrap">
 					<Input
 						label="Email"
 						type="email"
+						autoComplete="username"
 						{...register("username")}
 						error={errors.username ? { message: errors.username.message ?? "" } : undefined}
 					/>
@@ -263,13 +263,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onForgotPassword, loadin
 					<Input
 						label="Password"
 						type="password"
+						autoComplete="current-password"
 						{...register("password")}
 						error={errors.password ? { message: errors.password.message ?? "" } : undefined}
 					/>
 				</div>
 				<button
 					type="submit"
-					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-lg py-3 text-sm disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
 					disabled={loading}
 				>
 					{loading ? (
@@ -283,11 +284,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onForgotPassword, loadin
 					)}
 				</button>
 			</form>
-			<div className="text-center space-y-3 pt-2 border-t border-slate-100">
+			<div className="text-center pt-1">
 				<button
 					type="button"
 					onClick={onForgotPassword}
-					className="block w-full text-sm text-slate-500 hover:text-[#8b6f4e] transition-colors cursor-pointer"
+					className="block w-full text-sm auth-link cursor-pointer"
 					disabled={loading}
 				>
 					Ho dimenticato la password
@@ -309,24 +310,25 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onSendCode, onB
 	})
 	return (
 		<div className="space-y-8">
-			<div className="space-y-1 text-center">
-				<h1 className="text-2xl font-bold text-slate-900 tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+			<div className="space-y-1.5">
+				<h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
 					Recupero password
 				</h1>
-				<p className="text-sm text-slate-500">Inserisci l'email per ricevere il codice.</p>
+				<p className="text-sm text-slate-500">Inserisci l'email dell'account per ricevere un codice di verifica.</p>
 			</div>
 			<form className="space-y-5" onSubmit={handleSubmit(onSendCode)}>
 				<div className="auth-input-wrap">
 					<Input
 						label="Email"
 						type="email"
+						autoComplete="username"
 						{...register("email")}
 						error={errors.email ? { message: errors.email.message ?? "" } : undefined}
 					/>
 				</div>
 				<button
 					type="submit"
-					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm disabled:opacity-70 cursor-pointer"
+					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-lg py-3 text-sm disabled:opacity-70 cursor-pointer"
 					disabled={loading}
 				>
 					{loading ? (
@@ -343,7 +345,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onSendCode, onB
 			<button
 				type="button"
 				onClick={onBackToLogin}
-				className="w-full text-sm text-slate-500 hover:text-[#8b6f4e] flex items-center justify-center gap-1.5 transition-colors"
+				className="w-full text-sm auth-link flex items-center justify-center gap-1.5 transition-colors"
 				disabled={loading}
 			>
 				<i className="fas fa-arrow-left" /> Torna al login
@@ -364,8 +366,8 @@ const ConfirmCodeForm: React.FC<ConfirmCodeFormProps> = ({ onConfirmCode, onBack
 	})
 	return (
 		<div className="space-y-8">
-			<div className="space-y-1 text-center">
-				<h1 className="text-2xl font-bold text-slate-900 tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+			<div className="space-y-1.5">
+				<h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
 					Nuova password
 				</h1>
 				<p className="text-sm text-slate-500">Codice e nuova password ricevuti via email.</p>
@@ -378,6 +380,9 @@ const ConfirmCodeForm: React.FC<ConfirmCodeFormProps> = ({ onConfirmCode, onBack
 					<Input
 						label="Codice"
 						type="text"
+						placeholder="123456"
+						inputMode="numeric"
+						autoComplete="one-time-code"
 						{...register("code")}
 						error={errors.code ? { message: errors.code.message ?? "" } : undefined}
 					/>
@@ -386,6 +391,7 @@ const ConfirmCodeForm: React.FC<ConfirmCodeFormProps> = ({ onConfirmCode, onBack
 					<Input
 						label="Nuova password"
 						type="password"
+						autoComplete="new-password"
 						{...register("newPassword")}
 						error={errors.newPassword ? { message: errors.newPassword.message ?? "" } : undefined}
 					/>
@@ -394,13 +400,14 @@ const ConfirmCodeForm: React.FC<ConfirmCodeFormProps> = ({ onConfirmCode, onBack
 					<Input
 						label="Conferma password"
 						type="password"
+						autoComplete="new-password"
 						{...register("confirmPassword")}
 						error={errors.confirmPassword ? { message: errors.confirmPassword.message ?? "" } : undefined}
 					/>
 				</div>
 				<button
 					type="submit"
-					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm disabled:opacity-70 cursor-pointer"
+					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-lg py-3 text-sm disabled:opacity-70 cursor-pointer"
 					disabled={loading}
 				>
 					{loading ? (
@@ -417,7 +424,7 @@ const ConfirmCodeForm: React.FC<ConfirmCodeFormProps> = ({ onConfirmCode, onBack
 			<button
 				type="button"
 				onClick={onBackToForgotPassword}
-				className="w-full text-sm text-slate-500 hover:text-[#8b6f4e] flex items-center justify-center gap-1.5 transition-colors"
+				className="w-full text-sm auth-link flex items-center justify-center gap-1.5 transition-colors"
 				disabled={loading}
 			>
 				<i className="fas fa-arrow-left" /> Richiedi nuovo codice
@@ -438,8 +445,8 @@ const ResetForm: React.FC<ResetFormProps> = ({ onResetPassword, resetLoading }) 
 	})
 	return (
 		<div className="space-y-8">
-			<div className="space-y-1 text-center">
-				<h1 className="text-2xl font-bold text-slate-900 tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+			<div className="space-y-1.5">
+				<h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
 					Imposta password
 				</h1>
 				<p className="text-sm text-slate-500">Scegli una nuova password per il tuo account.</p>
@@ -449,6 +456,7 @@ const ResetForm: React.FC<ResetFormProps> = ({ onResetPassword, resetLoading }) 
 					<Input
 						label="Nuova password"
 						type="password"
+						autoComplete="new-password"
 						{...register("newPassword")}
 						error={errors.newPassword ? { message: errors.newPassword.message ?? "" } : undefined}
 					/>
@@ -457,13 +465,14 @@ const ResetForm: React.FC<ResetFormProps> = ({ onResetPassword, resetLoading }) 
 					<Input
 						label="Conferma password"
 						type="password"
+						autoComplete="new-password"
 						{...register("confirmPassword")}
 						error={errors.confirmPassword ? { message: errors.confirmPassword.message ?? "" } : undefined}
 					/>
 				</div>
 				<button
 					type="submit"
-					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm disabled:opacity-70 cursor-pointer"
+					className="auth-btn-primary mt-6 w-full flex items-center justify-center gap-2 rounded-lg py-3 text-sm disabled:opacity-70 cursor-pointer"
 					disabled={resetLoading}
 				>
 					{resetLoading ? (

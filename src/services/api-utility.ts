@@ -1,7 +1,7 @@
 import axios, {AxiosRequestConfig} from "axios"
 import {CognitoUserPool} from "amazon-cognito-identity-js"
 import {toast} from "react-toastify"
-import {LOCAL_STORAGE_KEYS} from "../constants"
+import {LOCAL_STORAGE_KEYS, loginHref} from "../constants"
 
 // ---------------------------------------------------------------------------
 // Cognito user pool (usato solo per il silent refresh del token)
@@ -40,7 +40,9 @@ const sessionExpired = (): void => {
 	console.error("Authentication failed. Redirecting to login...")
 	toast.error("Sessione scaduta, esegui nuovamente il login")
 	localStorage.clear()
-	window.location.href = "/login"
+	// Redirect fuori dal router: serve l'URL assoluto comprensivo del base path
+	// di Vite ("/silvia-webapp/"), non la sola rotta applicativa.
+	window.location.href = loginHref()
 }
 
 // ---------------------------------------------------------------------------

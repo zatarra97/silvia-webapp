@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from "react-router-dom"
 import { CognitoUser, CognitoUserPool } from "amazon-cognito-identity-js"
 import { Provider, ErrorBoundary } from "@rollbar/react"
 import AdminDashboard from "./Pages/Admin/AdminDashboard"
@@ -19,7 +19,7 @@ import "react-toastify/dist/ReactToastify.css"
 import AdminLayout from "./Components/AdminLayout"
 import { ThemeConfig } from "flowbite-react"
 import { ThemeInit } from "../.flowbite-react/init"
-import { LOCAL_STORAGE_KEYS, resolveRole } from "./constants"
+import { LOCAL_STORAGE_KEYS, LOGIN_ROUTE, resolveRole } from "./constants"
 import { ping } from "./services/api-utility"
 
 const rollbarConfig = {
@@ -39,16 +39,19 @@ const AppContent: React.FC = () => {
 	const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 	const [connectionError, setConnectionError] = useState(false)
 	const navigate = useNavigate()
+	const location = useLocation()
 
 	const redirectToLogin = (withReturnUrl: boolean = true) => {
 		setIsAuthenticated(false)
 		setUser(null)
-		const currentPath = `${window.location.pathname}${window.location.search}`
-		const isAlreadyLogin = window.location.pathname.startsWith("/accesso/login")
+		// Il returnUrl viene ripreso da `navigate()`, quindi deve essere relativo al
+		// router: `location` è già privo del base path, `window.location` no.
+		const currentPath = `${location.pathname}${location.search}`
+		const isAlreadyLogin = location.pathname.startsWith(LOGIN_ROUTE)
 		if (withReturnUrl && !isAlreadyLogin && currentPath) {
 			localStorage.setItem(LOCAL_STORAGE_KEYS.RETURN_URL, currentPath)
 		}
-		navigate("/accesso/login")
+		navigate(LOGIN_ROUTE)
 	}
 
 	useEffect(() => {
@@ -152,7 +155,7 @@ const AppContent: React.FC = () => {
 				<ToastContainer />
 				<Routes>
 					<Route
-						path="/accesso/login"
+						path={LOGIN_ROUTE}
 						element={<Login setIsAuthenticated={setIsAuthenticated} setUser={setUser} setUserRole={() => {}} />}
 					/>
 					<Route path="*" element={<Login setIsAuthenticated={setIsAuthenticated} setUser={setUser} setUserRole={() => {}} />} />
@@ -177,7 +180,7 @@ const AppContent: React.FC = () => {
 					<Route path="/admin/resistance-profiles" element={<ResistanceProfileList />} />
 					<Route path="/admin/ast-antibiotics" element={<AstAntibioticList />} />
 					<Route
-						path="/accesso/login"
+						path={LOGIN_ROUTE}
 						element={<Login setIsAuthenticated={setIsAuthenticated} setUser={setUser} setUserRole={() => {}} />}
 					/>
 					<Route path="*" element={<NotFound />} />

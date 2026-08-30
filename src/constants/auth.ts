@@ -15,11 +15,24 @@ export function resolveRole(groups: string[]): string {
   return groups.includes(COGNITO_GROUPS.ADMIN) ? USER_ROLES.ADMIN : USER_ROLES.USER;
 }
 
+// Rotte applicative, relative al router (senza il base path di Vite,
+// che viene aggiunto automaticamente da React Router tramite `basename`).
+export const LOGIN_ROUTE = '/accesso/login';
+
+// Unica area applicativa esistente: non c'è una sezione /user.
+export const DEFAULT_ROUTE = '/admin';
+
 // Route di default per ruolo
 export const DEFAULT_ROUTE_BY_ROLE: Record<string, string> = {
-  [USER_ROLES.ADMIN]: '/admin',
-  [USER_ROLES.USER]: '/user/dashboard',
+  [USER_ROLES.ADMIN]: DEFAULT_ROUTE,
+  [USER_ROLES.USER]: DEFAULT_ROUTE,
 };
+
+// URL assoluto del login, comprensivo del base path di Vite (`/silvia-webapp/`).
+// Serve nei redirect fatti con `window.location`, che bypassano il router.
+export function loginHref(): string {
+  return `${import.meta.env.BASE_URL}${LOGIN_ROUTE.replace(/^\//, '')}`;
+}
 
 // Chiavi per localStorage
 export const LOCAL_STORAGE_KEYS = {
