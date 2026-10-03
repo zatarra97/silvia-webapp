@@ -377,7 +377,7 @@ function buildDictionarySheet(workbook: ExcelJS.Workbook, lookups: Lookups): voi
   }
 
   // --- Row 1: Section headers ---
-  // Stessi colori delle intestazioni del foglio "Data": le due schede si
+  // Stessi colori delle intestazioni dei fogli dati: le schede si
   // leggono con la stessa chiave visiva.
   const sectionHeaderFont: Partial<ExcelJS.Font> = { bold: true, size: 11 }
 
@@ -471,6 +471,50 @@ function buildDictionarySheet(workbook: ExcelJS.Workbook, lookups: Lookups): voi
   sheet.views = [{ state: 'frozen', ySplit: 3 }]
 }
 
+function buildDataSheet(
+  workbook: ExcelJS.Workbook,
+  name: string,
+  rows: { patient: any; episode: PatientEpisode }[],
+  antibiotics: any[],
+): void {
+  const counts = computeDynamicCounts(rows.map(r => r.patient))
+  const headerEntries = buildHeaders(counts, antibiotics)
+  const headerLabels = headerEntries.map(h => h.label)
+
+  const sheet = workbook.addWorksheet(name)
+
+  // Add header row with section colors
+  const headerRow = sheet.addRow(headerLabels)
+  headerRow.eachCell((cell, colNumber) => {
+    const entry = headerEntries[colNumber - 1]
+    const colors = SECTION_COLORS[entry.section]
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.bg } }
+    cell.font = { bold: true, color: { argb: colors.font } }
+    cell.alignment = { horizontal: 'center', wrapText: true }
+  })
+
+  // Freeze header row
+  sheet.views = [{ state: 'frozen', ySplit: 1 }]
+
+  // Add patient rows
+  for (const { patient, episode } of rows) {
+    sheet.addRow(buildPatientRow(patient, episode, counts, antibiotics))
+  }
+
+  // Auto-filter
+  if (headerLabels.length > 0) {
+    sheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: headerLabels.length },
+    }
+  }
+
+  // Column widths
+  sheet.columns.forEach((col) => {
+    col.width = 18
+  })
+}
+
 export async function exportPatientsToExcel(patients: any[], lookups: Lookups): Promise<void> {
   const workbook = new ExcelJS.Workbook()
 
@@ -483,47 +527,25 @@ export async function exportPatientsToExcel(patients: any[], lookups: Lookups): 
   lookups.astAntibiotics = [...lookups.astAntibiotics].sort((a, b) => a.id - b.id)
   const antibiotics = lookups.astAntibiotics
 
-  const counts = computeDynamicCounts(patients)
-  const headerEntries = buildHeaders(counts, antibiotics)
-  const headerLabels = headerEntries.map(h => h.label)
-
-  // --- Sheet 1: Data ---
-  const dataSheet = workbook.addWorksheet('Data')
-
-  // Add header row with section colors
-  const headerRow = dataSheet.addRow(headerLabels)
-  headerRow.eachCell((cell, colNumber) => {
-    const entry = headerEntries[colNumber - 1]
-    const colors = SECTION_COLORS[entry.section]
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors.bg } }
-    cell.font = { bold: true, color: { argb: colors.font } }
-    cell.alignment = { horizontal: 'center', wrapText: true }
-  })
-
-  // Freeze header row
-  dataSheet.views = [{ state: 'frozen', ySplit: 1 }]
-
-  // Add patient rows
+  // Patient_ID ed Episode_number si calcolano su tutti i pazienti, prima della
+  // divisione in fogli: lo stesso paziente mantiene lo stesso Patient_ID anche
+  // se i suoi episodi finiscono in fogli diversi.
   const episodes = computePatientEpisodes(patients)
-  patients.forEach((patient, i) => {
-    const rowData = buildPatientRow(patient, episodes[i], counts, antibiotics)
-    dataSheet.addRow(rowData)
-  })
+  const rows = patients.map((patient, i) => ({ patient, episode: episodes[i], type: toNumOrNull(patient.monoPoliMicrobial) }))
 
-  // Auto-filter
-  if (headerLabels.length > 0) {
-    dataSheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: 1, column: headerLabels.length },
-    }
+  // Un foglio per tipo di infezione (campo "Mono- or poli-microbial infection").
+  // Le colonne dinamiche sono calcolate per foglio, quindi nel foglio
+  // mono-microbial i blocchi microbiologici non si ripetono.
+  buildDataSheet(workbook, 'Mono-microbial', rows.filter(r => r.type === 0), antibiotics)
+  buildDataSheet(workbook, 'Poli-microbial', rows.filter(r => r.type === 1), antibiotics)
+
+  // Pazienti senza il campo compilato: foglio a parte, solo se ce ne sono
+  const unclassified = rows.filter(r => r.type !== 0 && r.type !== 1)
+  if (unclassified.length > 0) {
+    buildDataSheet(workbook, 'Not classified', unclassified, antibiotics)
   }
 
-  // Column widths
-  dataSheet.columns.forEach((col) => {
-    col.width = 18
-  })
-
-  // --- Sheet 2: Dictionary ---
+  // --- Dictionary ---
   buildDictionarySheet(workbook, lookups)
 
   // Generate and save
