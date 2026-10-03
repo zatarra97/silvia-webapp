@@ -85,7 +85,7 @@ function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] 
   }
 
   // Demographics — il nome del paziente non viene esportato
-  push('demographic', 'ID', 'Date of Birth', 'Sex')
+  push('demographic', 'Patient_ID', 'Episode_ID', 'Episode_number', 'Date of Birth', 'Sex')
 
   // Clinical
   push('clinical', 'Ward of Admission', 'BSI Onset', 'BSI Diagnosis Date')
@@ -150,11 +150,69 @@ function toNumOrNull(value: any): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-function buildPatientRow(patient: any, counts: DynamicCounts, antibiotics: any[]): (string | number | null)[] {
+interface PatientEpisode {
+  patientId: number
+  episodeNumber: number
+}
+
+// Chiave di identità del paziente: nome e cognome (normalizzati) + data di nascita.
+// Senza uno dei due dati non si può riconoscere un paziente ripresentato,
+// quindi il record resta a sé (chiave univoca basata sull'indice).
+function patientIdentityKey(patient: any, index: number): string {
+  const name = String(patient.name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+  const dob = patient.dateOfBirth ? moment(patient.dateOfBirth) : null
+  if (!name || !dob?.isValid()) return `__unmatched_${index}`
+  return `${name}|${dob.format('YYYY-MM-DD')}`
+}
+
+// Calcola Patient_ID ed Episode_number per ogni riga esportata (stesso ordine di `patients`).
+// - Patient_ID: progressivo da 0, assegnato in ordine di prima comparsa nell'export;
+//   i ricoveri dello stesso paziente condividono lo stesso valore.
+// - Episode_number: 0 per il ricovero con admission date più vecchia, poi 1, 2, ...
+//   I ricoveri senza admission date vanno in coda.
+function computePatientEpisodes(patients: any[]): PatientEpisode[] {
+  const groups = new Map<string, number[]>()
+  patients.forEach((p, i) => {
+    const key = patientIdentityKey(p, i)
+    const indexes = groups.get(key)
+    if (indexes) indexes.push(i)
+    else groups.set(key, [i])
+  })
+
+  const admissionTime = (p: any): number => {
+    const m = p.admissionDate ? moment(p.admissionDate) : null
+    return m?.isValid() ? m.valueOf() : Number.POSITIVE_INFINITY
+  }
+
+  const result: PatientEpisode[] = new Array(patients.length)
+  let patientId = 0
+  for (const indexes of groups.values()) {
+    const sorted = [...indexes].sort((a, b) => {
+      const ta = admissionTime(patients[a])
+      const tb = admissionTime(patients[b])
+      if (ta !== tb) return ta < tb ? -1 : 1
+      return (patients[a].id ?? 0) - (patients[b].id ?? 0)
+    })
+    sorted.forEach((idx, episodeNumber) => {
+      result[idx] = { patientId, episodeNumber }
+    })
+    patientId++
+  }
+  return result
+}
+
+function buildPatientRow(patient: any, episode: PatientEpisode, counts: DynamicCounts, antibiotics: any[]): (string | number | null)[] {
   const row: (string | number | null)[] = []
 
   // Demographics — il nome del paziente non viene esportato
-  row.push(patient.internalId || null)
+  row.push(episode.patientId)
+  row.push(patient.internalId || null) // Episode_ID: numero di cartella clinica del ricovero
+  row.push(episode.episodeNumber)
   row.push(formatDateCell(patient.dateOfBirth))
   row.push(toNumOrNull(patient.sex))
 
@@ -255,7 +313,9 @@ function buildDictFields(lookups: Lookups): DictField[] {
 
   return [
     // DEMOGRAPHIC DATA
-    { name: 'ID patient', description: 'Unique patient identifier', section: 'demographic', type: 'text', options: [{ id: 0, label: 'code number' }] },
+    { name: 'Patient_ID', description: 'Progressive patient identifier starting from 0. The same value is repeated when a patient has more than one episode (patients are matched by full name and date of birth)', section: 'demographic', type: 'numeric' },
+    { name: 'Episode_ID', description: 'Medical record number (internal ID) identifying the single hospital admission (episode)', section: 'demographic', type: 'text', options: [{ id: 0, label: 'code number' }] },
+    { name: 'Episode_number', description: 'Progressive number of the episode for the same patient, ordered by admission date: 0 = first episode, 1 = second episode, and so on', section: 'demographic', type: 'numeric' },
     { name: 'Age', description: 'Date of birth', section: 'demographic', type: 'date' },
     { name: 'Sex', description: '', section: 'demographic', type: 'enum', options: [{ id: 0, label: 'Female' }, { id: 1, label: 'Male' }] },
 
@@ -444,10 +504,11 @@ export async function exportPatientsToExcel(patients: any[], lookups: Lookups): 
   dataSheet.views = [{ state: 'frozen', ySplit: 1 }]
 
   // Add patient rows
-  for (const patient of patients) {
-    const rowData = buildPatientRow(patient, counts, antibiotics)
+  const episodes = computePatientEpisodes(patients)
+  patients.forEach((patient, i) => {
+    const rowData = buildPatientRow(patient, episodes[i], counts, antibiotics)
     dataSheet.addRow(rowData)
-  }
+  })
 
   // Auto-filter
   if (headerLabels.length > 0) {
