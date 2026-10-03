@@ -221,6 +221,9 @@ export const getList = async (
 				} else if (value.includes("eq")) {
 					filterObj.where[fieldName] = {eq: null}
 				}
+			} else if (key === "resistanceGroup") {
+				// Filtro virtuale calcolato dal backend: confronto esatto sul codice del gruppo
+				filterObj.where[key] = Number(value)
 			} else if (key.includes("Id") && key !== "paramId") {
 				filterObj.where[key] = value
 			} else if (isBooleanField(key)) {

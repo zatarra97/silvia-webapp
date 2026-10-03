@@ -26,6 +26,16 @@ const COMBINATION_THERAPY_OPTIONS = [
   { value: '0', label: 'No' },
 ]
 
+// Gruppi di resistenza (resistance_group_final), calcolati dal backend
+// solo per gli episodi mono-microbial
+const RESISTANCE_GROUP_OPTIONS = [
+  { value: '1', label: 'ESBL/AmpC carbapenem-susceptible' },
+  { value: '2', label: 'CRE/CPE' },
+  { value: '3', label: 'CRAB' },
+  { value: '4', label: 'CRPA' },
+  { value: '5', label: 'Other MDR Enterobacterales' },
+]
+
 const PatientList = () => {
   const navigate = useNavigate()
   const [patients, setPatients] = useState<any[]>([])
@@ -76,6 +86,8 @@ const PatientList = () => {
       if (!value) return
       if (key === 'name') {
         where[key] = { like: `%${value}%`, options: 'i' }
+      } else if (key === 'resistanceGroup') {
+        where[key] = Number(value)
       } else if (key.includes('Id')) {
         where[key] = value
       } else {
@@ -131,9 +143,11 @@ const PatientList = () => {
 
   const filterConfig = [
     { label: 'Name', name: 'name', type: 'text' as const, options: [] },
+    { label: 'Internal ID', name: 'internalId', type: 'text' as const, options: [] },
     { label: 'Sex', name: 'sex', type: 'select' as const, options: SEX_OPTIONS },
     { label: 'Outcome', name: 'outcome', type: 'select' as const, options: OUTCOME_OPTIONS },
     { label: 'Combination Therapy', name: 'combinationTherapy', type: 'select' as const, options: COMBINATION_THERAPY_OPTIONS },
+    { label: 'Resistance Group (mono-microbial)', name: 'resistanceGroup', type: 'select' as const, options: RESISTANCE_GROUP_OPTIONS },
   ]
 
   const columns = [
@@ -162,15 +176,6 @@ const PatientList = () => {
       key: 'bsiDiagnosisDate',
       header: 'BSI Diagnosis Date',
       render: (value: string) => formatDate(value),
-    },
-    {
-      key: 'combinationTherapy',
-      header: 'Combination Therapy',
-      render: (value: number | null) => {
-        if (value === 1) return 'Yes'
-        if (value === 0) return 'No'
-        return '-'
-      },
     },
     {
       key: 'los',

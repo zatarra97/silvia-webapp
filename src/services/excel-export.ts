@@ -122,6 +122,7 @@ function buildHeaders(counts: DynamicCounts, antibiotics: any[]): HeaderEntry[] 
   }
 
   push('microbiological', 'Mono/Poli Microbial')
+  push('microbiological', 'resistance_group_final', ...RESISTANCE_MARKERS.map(m => m.label), 'Carbapenem resistant')
 
   // Therapeutic
   for (let i = 1; i <= counts.maxEmpiricalTherapies; i++) {
@@ -148,6 +149,47 @@ function toNumOrNull(value: any): number | null {
   if (value === null || value === undefined || value === '') return null
   const n = Number(value)
   return Number.isFinite(n) ? n : null
+}
+
+// Gruppi di resistenza (resistance_group_final): calcolati dal backend,
+// solo per gli episodi mono-microbial
+const RESISTANCE_GROUPS = [
+  { id: 1, label: 'ESBL/AmpC carbapenem-susceptible' },
+  { id: 2, label: 'CRE/CPE' },
+  { id: 3, label: 'CRAB' },
+  { id: 4, label: 'CRPA' },
+  { id: 5, label: 'Other MDR Enterobacterales' },
+]
+
+// Meccanismi di resistenza esportati come colonne Sì/No distinte, accanto al
+// gruppo sintetico. Riconosciuti dal nome del resistance profile.
+const RESISTANCE_MARKERS: { label: string; pattern: RegExp }[] = [
+  { label: 'ESBL', pattern: /\besbl\b/i },
+  { label: 'AmpC', pattern: /\bampc\b/i },
+  { label: 'KPC', pattern: /\bkpc\b/i },
+  { label: 'OXA-48-like', pattern: /\boxa-?48\b/i },
+  { label: 'NDM', pattern: /\bndm\b/i },
+  { label: 'VIM', pattern: /\bvim\b/i },
+  { label: 'MDR', pattern: /\bmdr\b/i },
+]
+
+// Come nel backend: solo imipenem e meropenem (l'ertapenem da solo non basta)
+const CARBAPENEM = /^(imipenem|meropenem)$/i
+const AST_RESISTANT = 1
+
+// Valori Sì/No a livello di episodio: 1 se almeno un patogeno BSI ha il meccanismo
+function resistanceMarkerValues(patient: any, profileNames: Map<number, string>, antibiotics: any[]): number[] {
+  const bsiPathogens = patient.bsiPathogens || []
+  const profiles: string[] = bsiPathogens.flatMap((bp: any) =>
+    (bp.resistanceProfiles || []).map((rp: any) => profileNames.get(rp.resistanceProfileId) || ''))
+  const carbapenemIds = new Set(antibiotics.filter(ab => CARBAPENEM.test(ab.name)).map(ab => ab.id))
+  const carbapenemResistant = bsiPathogens.some((bp: any) =>
+    (bp.astResults || []).some((ar: any) => carbapenemIds.has(ar.astAntibioticId) && toNumOrNull(ar.astValue) === AST_RESISTANT))
+
+  return [
+    ...RESISTANCE_MARKERS.map(m => (profiles.some(p => m.pattern.test(p)) ? 1 : 0)),
+    carbapenemResistant ? 1 : 0,
+  ]
 }
 
 interface PatientEpisode {
@@ -206,7 +248,7 @@ function computePatientEpisodes(patients: any[]): PatientEpisode[] {
   return result
 }
 
-function buildPatientRow(patient: any, episode: PatientEpisode, counts: DynamicCounts, antibiotics: any[]): (string | number | null)[] {
+function buildPatientRow(patient: any, episode: PatientEpisode, counts: DynamicCounts, antibiotics: any[], profileNames: Map<number, string>): (string | number | null)[] {
   const row: (string | number | null)[] = []
 
   // Demographics — il nome del paziente non viene esportato
@@ -279,6 +321,8 @@ function buildPatientRow(patient: any, episode: PatientEpisode, counts: DynamicC
   }
 
   row.push(toNumOrNull(patient.monoPoliMicrobial))
+  row.push(toNumOrNull(patient.resistanceGroup))
+  row.push(...resistanceMarkerValues(patient, profileNames, antibiotics))
 
   // Therapeutic
   const empiricalTherapies = patient.empiricalTherapies || []
@@ -339,6 +383,9 @@ function buildDictFields(lookups: Lookups): DictField[] {
     { name: 'IC site of isolation', description: 'Site of isolation for infectious complication pathogen', section: 'microbiological', type: 'enum', options: sortById(lookups.sites).map(s => ({ id: s.id, label: s.name })) },
     { name: 'IC resistance profile', description: 'Resistance mechanism for infectious complication pathogen', section: 'microbiological', type: 'enum', options: sortById(lookups.resistanceProfiles).map(r => ({ id: r.id, label: r.name })) },
     { name: 'Mono- or poli-microbial infection', description: 'BSI caused by a single microorganism or by multiple microorganisms', section: 'microbiological', type: 'enum', options: [{ id: 0, label: 'Monomicrobial' }, { id: 1, label: 'Polymicrobial' }] },
+    { name: 'resistance_group_final', description: 'Final resistance group, mutually exclusive, assigned only to monomicrobial episodes (empty for polymicrobial). Hierarchy: CRAB (A. baumannii carbapenem-resistant) > CRPA (P. aeruginosa carbapenem-resistant) > CRE/CPE (Enterobacterales with KPC, OXA-48-like, NDM, VIM, KRE or imipenem/meropenem resistant) > ESBL/AmpC carbapenem-susceptible (documented imipenem/meropenem susceptibility) > Other MDR Enterobacterales. Group 1 is the internal comparison group (reference category)', section: 'microbiological', type: 'enum', options: RESISTANCE_GROUPS },
+    ...RESISTANCE_MARKERS.map(m => ({ name: m.label, description: `${m.label} detected in at least one BSI pathogen (from resistance profiles)`, section: 'microbiological' as const, type: 'enum' as const, options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] })),
+    { name: 'Carbapenem resistant', description: 'At least one BSI pathogen resistant to imipenem or meropenem (AST). Ertapenem alone is not considered', section: 'microbiological', type: 'enum', options: [{ id: 0, label: 'No' }, { id: 1, label: 'Yes' }] },
     { name: 'Antibiotic susceptibility testing (AST)', description: 'Result of antimicrobial susceptibility testing for each antibiotic', section: 'microbiological', type: 'enum', options: [{ id: 0, label: 'Not available / not tested' }, { id: 1, label: 'Resistant' }, { id: 2, label: 'Susceptible' }, { id: 3, label: 'Intermediate' }] },
     { name: 'Minimum Inhibitory Concentration (MIC)', description: 'Lowest antibiotic concentration inhibiting bacterial growth', section: 'microbiological', type: 'numeric' },
 
@@ -476,6 +523,7 @@ function buildDataSheet(
   name: string,
   rows: { patient: any; episode: PatientEpisode }[],
   antibiotics: any[],
+  profileNames: Map<number, string>,
 ): void {
   const counts = computeDynamicCounts(rows.map(r => r.patient))
   const headerEntries = buildHeaders(counts, antibiotics)
@@ -498,7 +546,7 @@ function buildDataSheet(
 
   // Add patient rows
   for (const { patient, episode } of rows) {
-    sheet.addRow(buildPatientRow(patient, episode, counts, antibiotics))
+    sheet.addRow(buildPatientRow(patient, episode, counts, antibiotics, profileNames))
   }
 
   // Auto-filter
@@ -531,18 +579,19 @@ export async function exportPatientsToExcel(patients: any[], lookups: Lookups): 
   // divisione in fogli: lo stesso paziente mantiene lo stesso Patient_ID anche
   // se i suoi episodi finiscono in fogli diversi.
   const episodes = computePatientEpisodes(patients)
+  const profileNames = new Map<number, string>(lookups.resistanceProfiles.map(rp => [rp.id, rp.name]))
   const rows = patients.map((patient, i) => ({ patient, episode: episodes[i], type: toNumOrNull(patient.monoPoliMicrobial) }))
 
   // Un foglio per tipo di infezione (campo "Mono- or poli-microbial infection").
   // Le colonne dinamiche sono calcolate per foglio, quindi nel foglio
   // mono-microbial i blocchi microbiologici non si ripetono.
-  buildDataSheet(workbook, 'Mono-microbial', rows.filter(r => r.type === 0), antibiotics)
-  buildDataSheet(workbook, 'Poli-microbial', rows.filter(r => r.type === 1), antibiotics)
+  buildDataSheet(workbook, 'Mono-microbial', rows.filter(r => r.type === 0), antibiotics, profileNames)
+  buildDataSheet(workbook, 'Poli-microbial', rows.filter(r => r.type === 1), antibiotics, profileNames)
 
   // Pazienti senza il campo compilato: foglio a parte, solo se ce ne sono
   const unclassified = rows.filter(r => r.type !== 0 && r.type !== 1)
   if (unclassified.length > 0) {
-    buildDataSheet(workbook, 'Not classified', unclassified, antibiotics)
+    buildDataSheet(workbook, 'Not classified', unclassified, antibiotics, profileNames)
   }
 
   // --- Dictionary ---

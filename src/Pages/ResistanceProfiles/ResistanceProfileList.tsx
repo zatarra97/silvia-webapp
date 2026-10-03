@@ -134,6 +134,7 @@ const ResistanceProfileList = () => {
   const columns = [
     { key: 'id', header: 'ID' },
     { key: 'name', header: 'Name' },
+    { key: 'resistanceGroup', header: 'Group', render: (value: string | null) => value || '-' },
     { key: 'createdAt', header: 'Created', render: (value: string) => (value ? moment(value).format('DD/MM/YYYY HH:mm') : '-') },
   ]
 
